@@ -1,10 +1,10 @@
 from typing import Optional
 from PySide6 import QtCore, QtGui, QtWidgets
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QCoreApplication
 from PySide6.QtWidgets import QApplication, QDialog
 from PySide6.QtCore import Slot
 from checkin_ui import Ui_Dialog
-import git
+import git,workitems
 
 
 class FileModel(object):
@@ -14,6 +14,12 @@ class FileModel(object):
         if self.status=="??":
             self.status=" U"
 
+    def __str__(self) -> str:
+        return self.status + '   '+ self.name
+
+    def __repr__(self) -> str:
+        return str(self)
+
 class FileView(QtCore.QAbstractListModel):
     def __init__(self, flist=[]):
             super().__init__()
@@ -22,7 +28,7 @@ class FileView(QtCore.QAbstractListModel):
     def data(self, index, role):
         if role == Qt.DisplayRole:
             f=self.flist[index.row()]
-            return f.status + '   '+ f.name
+            return str(f)
         elif role == Qt.ForegroundRole:
             status = self.flist[index.row()].status[1]
             if status=='U':
@@ -50,6 +56,7 @@ class CheckinApp(QDialog):
         ui.setupUi(self)
         self.pendingChanges=pendingChanges
         self.checkinItems=[]
+        self.workItem=None
         ui.listViewPendingChanges.setModel(FileView(self.pendingChanges))
         ui.listViewCheckinItems.setModel(FileView(self.checkinItems))
 
@@ -58,9 +65,32 @@ class CheckinApp(QDialog):
         ui.bExcludeSelected.clicked.connect(self.excludeSelected)
         ui.bExcludeAll.clicked.connect(self.excludeAll)
 
+        ui.lineEditWorkItem.editingFinished.connect(self.workItemChanged)
+
     def notifyChanges(self):
         self.ui.listViewPendingChanges.model().layoutChanged.emit()
         self.ui.listViewCheckinItems.model().layoutChanged.emit()
+
+    @Slot()
+    def workItemChanged(self):
+        try:
+            wiId=int(self.ui.lineEditWorkItem.text())
+            self.ui.labelWorkItemDesc.setText(f'<span style="color:blue">*fetching work item ...*</span>')
+            QCoreApplication.processEvents()
+            rsp=list(workitems.get_work_items(wiId))[0]
+            is_error=False
+            if isinstance(rsp,str):
+                is_error=True
+                title=rsp
+            else:
+                title=rsp["fields"]["System.Title"]
+        except:
+            is_error=True
+            title="Please enter a valid work item"
+
+        if title:
+            color="red" if is_error else "green"
+            self.ui.labelWorkItemDesc.setText(f'<span style="color:{color}">{title}</span>')
 
     @Slot()
     def includeSelected(self):
@@ -99,4 +129,4 @@ if __name__ == "__main__":
     ret=app.exec()
     # Run the main Qt loop
     if ret:
-         pass
+        print(app.checkinItems)

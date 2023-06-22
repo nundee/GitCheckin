@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>419</width>
-    <height>519</height>
+    <height>624</height>
    </rect>
   </property>
   <property name="font">
@@ -94,19 +94,25 @@ QPushButton:default {
           </widget>
          </item>
          <item>
-          <widget class="QComboBox" name="comboBoxWorkItems">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="editable">
-            <bool>true</bool>
-           </property>
-          </widget>
+          <widget class="QLineEdit" name="lineEditWorkItem"/>
          </item>
         </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelWorkItemDesc">
+         <property name="text">
+          <string/>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::MarkdownText</enum>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="margin">
+          <number>3</number>
+         </property>
+        </widget>
        </item>
        <item>
         <widget class="QGroupBox" name="groupBox">
@@ -248,50 +254,77 @@ QPushButton:default {
          </layout>
         </widget>
        </item>
-       <item>
-        <widget class="QDialogButtonBox" name="buttonBox">
-         <property name="standardButtons">
-          <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-         </property>
-        </widget>
-       </item>
       </layout>
      </widget>
     </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <property name="spacing">
+      <number>2</number>
+     </property>
+     <item>
+      <widget class="QPushButton" name="bCheckin">
+       <property name="text">
+        <string>Check in</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="bCancel">
+       <property name="text">
+        <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_3">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
  <resources/>
  <connections>
   <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
-   <receiver>Dialog</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>200</x>
-     <y>430</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>200</x>
-     <y>225</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
+   <sender>bCheckin</sender>
+   <signal>clicked()</signal>
    <receiver>Dialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>200</x>
-     <y>430</y>
+     <x>49</x>
+     <y>595</y>
     </hint>
     <hint type="destinationlabel">
-     <x>200</x>
-     <y>225</y>
+     <x>209</x>
+     <y>311</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>bCancel</sender>
+   <signal>clicked()</signal>
+   <receiver>Dialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>131</x>
+     <y>595</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>209</x>
+     <y>311</y>
     </hint>
    </hints>
   </connection>

@@ -15,17 +15,16 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QApplication, QComboBox,
-    QDialog, QDialogButtonBox, QFrame, QGroupBox,
-    QHBoxLayout, QLabel, QLineEdit, QListView,
-    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QFrame,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QListView, QPushButton, QSizePolicy, QSpacerItem,
+    QSplitter, QVBoxLayout, QWidget)
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(419, 519)
+        Dialog.resize(419, 624)
         font = QFont()
         font.setFamilies([u"Calibri"])
         font.setPointSize(9)
@@ -96,19 +95,21 @@ class Ui_Dialog(object):
 
         self.horizontalLayout_3.addWidget(self.label)
 
-        self.comboBoxWorkItems = QComboBox(self.widget)
-        self.comboBoxWorkItems.setObjectName(u"comboBoxWorkItems")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.comboBoxWorkItems.sizePolicy().hasHeightForWidth())
-        self.comboBoxWorkItems.setSizePolicy(sizePolicy1)
-        self.comboBoxWorkItems.setEditable(True)
+        self.lineEditWorkItem = QLineEdit(self.widget)
+        self.lineEditWorkItem.setObjectName(u"lineEditWorkItem")
 
-        self.horizontalLayout_3.addWidget(self.comboBoxWorkItems)
+        self.horizontalLayout_3.addWidget(self.lineEditWorkItem)
 
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_3)
+
+        self.labelWorkItemDesc = QLabel(self.widget)
+        self.labelWorkItemDesc.setObjectName(u"labelWorkItemDesc")
+        self.labelWorkItemDesc.setTextFormat(Qt.MarkdownText)
+        self.labelWorkItemDesc.setWordWrap(True)
+        self.labelWorkItemDesc.setMargin(3)
+
+        self.verticalLayout_3.addWidget(self.labelWorkItemDesc)
 
         self.groupBox = QGroupBox(self.widget)
         self.groupBox.setObjectName(u"groupBox")
@@ -188,20 +189,34 @@ class Ui_Dialog(object):
 
         self.verticalLayout_4.addWidget(self.groupBox_2)
 
-        self.buttonBox = QDialogButtonBox(self.widget1)
-        self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-
-        self.verticalLayout_4.addWidget(self.buttonBox)
-
         self.splitter.addWidget(self.widget1)
 
         self.verticalLayout_5.addWidget(self.splitter)
 
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setSpacing(2)
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.bCheckin = QPushButton(Dialog)
+        self.bCheckin.setObjectName(u"bCheckin")
+
+        self.horizontalLayout_5.addWidget(self.bCheckin)
+
+        self.bCancel = QPushButton(Dialog)
+        self.bCancel.setObjectName(u"bCancel")
+
+        self.horizontalLayout_5.addWidget(self.bCancel)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_5.addItem(self.horizontalSpacer_3)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_5)
+
 
         self.retranslateUi(Dialog)
-        self.buttonBox.rejected.connect(Dialog.close)
-        self.buttonBox.accepted.connect(Dialog.accept)
+        self.bCheckin.clicked.connect(Dialog.accept)
+        self.bCancel.clicked.connect(Dialog.reject)
 
         QMetaObject.connectSlotsByName(Dialog)
     # setupUi
@@ -210,11 +225,14 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Check in changes", None))
         self.label_4.setText(QCoreApplication.translate("Dialog", u"Comment:", None))
         self.label.setText(QCoreApplication.translate("Dialog", u"Work item:", None))
+        self.labelWorkItemDesc.setText("")
         self.groupBox.setTitle(QCoreApplication.translate("Dialog", u"Checkin items", None))
         self.bExcludeSelected.setText(QCoreApplication.translate("Dialog", u" Exclude selected ", None))
         self.bExcludeAll.setText(QCoreApplication.translate("Dialog", u"Exclude All", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("Dialog", u"Pending changes", None))
         self.bIncludeSelected.setText(QCoreApplication.translate("Dialog", u" Include selected ", None))
         self.bIncludeAll.setText(QCoreApplication.translate("Dialog", u"Include All", None))
+        self.bCheckin.setText(QCoreApplication.translate("Dialog", u"Check in", None))
+        self.bCancel.setText(QCoreApplication.translate("Dialog", u"Cancel", None))
     # retranslateUi
 
