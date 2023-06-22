@@ -1,86 +1,102 @@
-from rich.console import RenderableType
-from textual import events
-from textual.app import App, ComposeResult
-from textual.containers import ScrollableContainer,Horizontal
-from textual.reactive import reactive
-from textual.widgets import Button, Footer, Header, Static,Checkbox
-from rich.text import Text, TextType
-from rich.style import Style
-from rich.color import Color
-
+from typing import Optional
+from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QDialog
+from PySide6.QtCore import Slot
+from checkin_ui import Ui_Dialog
 import git
 
-class MyCheckbox(Checkbox):
-    BUTTON_LEFT  = '['
-    BUTTON_RIGHT = ']'
-    BUTTON_INNER = 'X'
 
-    def on_mount(self) -> None:
-        self.watch_value(self.value)
+class FileModel(object):
+    def __init__(self, text) -> None:
+        self.name=text[3:]
+        self.status=text[:2]
+        if self.status=="??":
+            self.status=" U"
 
-    def watch_value(self, v):
-        #self.BUTTON_INNER = 'X' if v else '.'
-        pass
+class FileView(QtCore.QAbstractListModel):
+    def __init__(self, flist=[]):
+            super().__init__()
+            self.flist = flist
 
-class FileEntry(Static):
-    fname=""
-    status=""
-    def compose(self):
-        yield Checkbox()
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            f=self.flist[index.row()]
+            return f.status + '   '+ f.name
+        elif role == Qt.ForegroundRole:
+            status = self.flist[index.row()].status[1]
+            if status=='U':
+                return QtGui.QColor("green")
+            elif status=='M':
+                return QtGui.QColor("blue")
+            elif status=='D':
+                return QtGui.QColor("red")
+        elif role == Qt.FontRole:
+            status = self.flist[index.row()].status[1]
+            if status=='D':
+                font=QtGui.QFont()
+                font.setStrikeOut(True)
+                return font
 
-    def on_mount(self):
-        cb:Checkbox = self.query_one(Checkbox)
-        cb._label = Text.from_markup(f"{self.fname} [i]{self.status}[/i]")
-
-
-
-class PendingChangesList(Static):
-    def compose(self):
-        yield Horizontal(
-            Button("Include selected", id="include"),
-            Button("Include all", id="includeall"))
-        yield ScrollableContainer(id="scrollwin1")
-
-    async def on_mount(self):
-        container = self.query_one("#scrollwin1")
-        container.styles.height = "auto"
-        async for f in git.status():
-            fe=FileEntry()
-            fe.fname = f[3:]
-            fe.status= f[:2]
-            container.mount(fe)
-
-class CheckinList(Static):
-    def compose(self):
-        yield Horizontal(
-            Button("Check in", id="checkin"),
-            Button("Exclude selected", id="exclude"),
-            Button("Exclude all", id="excludeall"))
-        yield ScrollableContainer(id="scrollwin2")
-
-    def on_mount(self):
-        container = self.query_one("#scrollwin2")
-        container.styles.height = "auto"
+    def rowCount(self, index):
+        return len(self.flist)
 
 
-class CheckinApp(App):
-    CSS_PATH = "checkin.css"
+class CheckinApp(QDialog):
+    def __init__(self, pendingChanges) -> None:
+        super().__init__(None)
+        ui=Ui_Dialog()
+        self.ui=ui
+        ui.setupUi(self)
+        self.pendingChanges=pendingChanges
+        self.checkinItems=[]
+        ui.listViewPendingChanges.setModel(FileView(self.pendingChanges))
+        ui.listViewCheckinItems.setModel(FileView(self.checkinItems))
 
-    #BINDINGS = [
-    #    ("d", "toggle_dark", "Toggle dark mode"),
-    #    ("a", "add_stopwatch", "Add"),
-    #    ("r", "remove_stopwatch", "Remove"),
-    #]
+        ui.bIncludeSelected.clicked.connect(self.includeSelected)
+        ui.bIncludeAll.clicked.connect(self.includeAll)
+        ui.bExcludeSelected.clicked.connect(self.excludeSelected)
+        ui.bExcludeAll.clicked.connect(self.excludeAll)
 
-    def compose(self) -> ComposeResult:
-        """Called to add widgets to the app."""
-        yield Header()
-        yield Footer()
-        yield CheckinList(id="checkinList")
-        yield PendingChangesList(id="pendigList")
+    def notifyChanges(self):
+        self.ui.listViewPendingChanges.model().layoutChanged.emit()
+        self.ui.listViewCheckinItems.model().layoutChanged.emit()
 
+    @Slot()
+    def includeSelected(self):
+        items = [self.pendingChanges[i.row()] for i in self.ui.listViewPendingChanges.selectedIndexes()]
+        for i in items:
+            self.checkinItems.append(i)
+            self.pendingChanges.remove(i)
+        self.notifyChanges()
+
+    @Slot()
+    def includeAll(self):
+        self.checkinItems+=self.pendingChanges
+        self.pendingChanges.clear()
+        self.notifyChanges()
+
+    @Slot()
+    def excludeSelected(self):
+        items = [self.checkinItems[i.row()] for i in self.ui.listViewCheckinItems.selectedIndexes()]
+        for i in items:
+            self.pendingChanges.append(i)
+            self.checkinItems.remove(i)
+        self.notifyChanges()
+
+    @Slot()
+    def excludeAll(self):
+        self.pendingChanges+=self.checkinItems
+        self.checkinItems.clear()
+        self.notifyChanges()
 
 
 if __name__ == "__main__":
-    app = CheckinApp()
-    app.run()
+    import sys
+    pendingChanges=[FileModel(line) for line in git.status()]
+    qapp=QApplication(sys.argv)
+    app = CheckinApp(pendingChanges)
+    ret=app.exec()
+    # Run the main Qt loop
+    if ret:
+         pass
