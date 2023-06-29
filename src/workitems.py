@@ -1,5 +1,6 @@
-from devops_api import wit_api_call
+from devops_api import wit_api_call,cache
 
+@cache
 def get_work_items(id_or_text):
     try:
         wiId = int(id_or_text)
@@ -32,7 +33,6 @@ def get_work_items(id_or_text):
 
 
 if __name__=='__main__':
-    #for wi in get_work_items("classif"):
-    #    print(wi)
-    for wi in get_work_items(19825):
-        print(wi)
+    from pprint import pprint
+    for wi in get_work_items(2222):
+        pprint(wi)

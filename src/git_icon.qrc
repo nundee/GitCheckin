@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="git-icon">
+    <file>Git-Icon-1788C.png</file>
+  </qresource>
+</RCC>

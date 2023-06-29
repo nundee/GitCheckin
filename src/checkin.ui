@@ -20,6 +20,10 @@
   <property name="windowTitle">
    <string>Check in changes</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="git_icon.qrc">
+    <normaloff>:/git-icon/Git-Icon-1788C.png</normaloff>:/git-icon/Git-Icon-1788C.png</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true">QPushButton {
     border: none;
@@ -62,7 +66,7 @@ QPushButton:default {
      <property name="handleWidth">
       <number>10</number>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -74,7 +78,14 @@ QPushButton:default {
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEditComment"/>
+          <widget class="QPlainTextEdit" name="textEditComment">
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>100</height>
+            </size>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>
@@ -184,7 +195,7 @@ QPushButton:default {
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
         <widget class="QGroupBox" name="groupBox_2">
@@ -294,7 +305,9 @@ QPushButton:default {
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="git_icon.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>bCheckin</sender>

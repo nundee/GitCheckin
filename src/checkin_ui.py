@@ -17,8 +17,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QFrame,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QListView, QPushButton, QSizePolicy, QSpacerItem,
-    QSplitter, QVBoxLayout, QWidget)
+    QListView, QPlainTextEdit, QPushButton, QSizePolicy,
+    QSpacerItem, QSplitter, QVBoxLayout, QWidget)
+import git_icon_rc
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
@@ -30,6 +31,9 @@ class Ui_Dialog(object):
         font.setPointSize(9)
         font.setStyleStrategy(QFont.PreferAntialias)
         Dialog.setFont(font)
+        icon = QIcon()
+        icon.addFile(u":/git-icon/Git-Icon-1788C.png", QSize(), QIcon.Normal, QIcon.Off)
+        Dialog.setWindowIcon(icon)
         Dialog.setStyleSheet(u"QPushButton {\n"
 "    border: none;\n"
 "    border-radius: 4px;\n"
@@ -63,29 +67,30 @@ class Ui_Dialog(object):
         self.splitter.setLineWidth(5)
         self.splitter.setOrientation(Qt.Vertical)
         self.splitter.setHandleWidth(10)
-        self.widget = QWidget(self.splitter)
-        self.widget.setObjectName(u"widget")
-        self.verticalLayout_3 = QVBoxLayout(self.widget)
+        self.layoutWidget = QWidget(self.splitter)
+        self.layoutWidget.setObjectName(u"layoutWidget")
+        self.verticalLayout_3 = QVBoxLayout(self.layoutWidget)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.label_4 = QLabel(self.widget)
+        self.label_4 = QLabel(self.layoutWidget)
         self.label_4.setObjectName(u"label_4")
 
         self.horizontalLayout_4.addWidget(self.label_4)
 
-        self.lineEditComment = QLineEdit(self.widget)
-        self.lineEditComment.setObjectName(u"lineEditComment")
+        self.textEditComment = QPlainTextEdit(self.layoutWidget)
+        self.textEditComment.setObjectName(u"textEditComment")
+        self.textEditComment.setMaximumSize(QSize(16777215, 100))
 
-        self.horizontalLayout_4.addWidget(self.lineEditComment)
+        self.horizontalLayout_4.addWidget(self.textEditComment)
 
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_4)
 
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.label = QLabel(self.widget)
+        self.label = QLabel(self.layoutWidget)
         self.label.setObjectName(u"label")
         sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -95,7 +100,7 @@ class Ui_Dialog(object):
 
         self.horizontalLayout_3.addWidget(self.label)
 
-        self.lineEditWorkItem = QLineEdit(self.widget)
+        self.lineEditWorkItem = QLineEdit(self.layoutWidget)
         self.lineEditWorkItem.setObjectName(u"lineEditWorkItem")
 
         self.horizontalLayout_3.addWidget(self.lineEditWorkItem)
@@ -103,7 +108,7 @@ class Ui_Dialog(object):
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_3)
 
-        self.labelWorkItemDesc = QLabel(self.widget)
+        self.labelWorkItemDesc = QLabel(self.layoutWidget)
         self.labelWorkItemDesc.setObjectName(u"labelWorkItemDesc")
         self.labelWorkItemDesc.setTextFormat(Qt.MarkdownText)
         self.labelWorkItemDesc.setWordWrap(True)
@@ -111,7 +116,7 @@ class Ui_Dialog(object):
 
         self.verticalLayout_3.addWidget(self.labelWorkItemDesc)
 
-        self.groupBox = QGroupBox(self.widget)
+        self.groupBox = QGroupBox(self.layoutWidget)
         self.groupBox.setObjectName(u"groupBox")
         self.verticalLayout = QVBoxLayout(self.groupBox)
         self.verticalLayout.setSpacing(2)
@@ -147,13 +152,13 @@ class Ui_Dialog(object):
 
         self.verticalLayout_3.addWidget(self.groupBox)
 
-        self.splitter.addWidget(self.widget)
-        self.widget1 = QWidget(self.splitter)
-        self.widget1.setObjectName(u"widget1")
-        self.verticalLayout_4 = QVBoxLayout(self.widget1)
+        self.splitter.addWidget(self.layoutWidget)
+        self.layoutWidget1 = QWidget(self.splitter)
+        self.layoutWidget1.setObjectName(u"layoutWidget1")
+        self.verticalLayout_4 = QVBoxLayout(self.layoutWidget1)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.groupBox_2 = QGroupBox(self.widget1)
+        self.groupBox_2 = QGroupBox(self.layoutWidget1)
         self.groupBox_2.setObjectName(u"groupBox_2")
         self.verticalLayout_2 = QVBoxLayout(self.groupBox_2)
         self.verticalLayout_2.setSpacing(2)
@@ -189,7 +194,7 @@ class Ui_Dialog(object):
 
         self.verticalLayout_4.addWidget(self.groupBox_2)
 
-        self.splitter.addWidget(self.widget1)
+        self.splitter.addWidget(self.layoutWidget1)
 
         self.verticalLayout_5.addWidget(self.splitter)
 
