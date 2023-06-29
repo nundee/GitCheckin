@@ -253,9 +253,10 @@ if __name__ == "__main__":
 
     ok,_=check_error(git.unshelve_last(drop=False), do_exit=False)
     if not ok:
-        git.git("switch",currentBranch)
-        log("unshelve the last change")
-        git.unshelve_last(drop=True)
+        ok,ret=check_error(git.git("switch",currentBranch), do_exit=False)
+        if ok:
+            log("unshelve the last change")
+            git.unshelve_last(drop=True)
         abort()
 
     # commit changes

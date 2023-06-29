@@ -61,7 +61,8 @@ if __name__=="__main__":
         with open(__get_list_file(),"rt") as fp:
             for line in fp.readlines():
                 data.append(json.loads(line))
-        for task in data:
+        delete_list=[]
+        for i_task,task in enumerate(data):
             repo_dir=task["repo"]
             git.set_repo_dir(repo_dir)
             stash_ref= None
@@ -89,6 +90,16 @@ if __name__=="__main__":
                             notify_text.append((f'droped shelve {stash_ref}', 'info'))
                         else:
                             notify_text.append((ret,'warn'))
+            else:
+                delete_list.append(i_task)
+
+        if delete_list:
+            delete_list.reverse()
+            for i in delete_list:
+                del data[i]
+            with open(__get_list_file(),"wt") as fp:
+                for x in data:
+                    json.dump(x,fp)
 
     except Exception as ex:
         print(ex)
