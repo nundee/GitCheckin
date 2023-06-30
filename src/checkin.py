@@ -285,8 +285,8 @@ if __name__ == "__main__":
                                          log_output=False)
     ok,pr=check_error(devops_api.update_pull_request(remote_url,pr["pullRequestId"]))
 
-    import cleanup
-    cleanup.post_cleanup(os.getcwd(),tmp_branchName,stash_commit["CommitHash"],pr["pullRequestId"])
+    from cleanup import post_cleanup
+    post_cleanup(os.getcwd(),tmp_branchName,stash_commit["CommitHash"],pr["pullRequestId"])
 
-    import webbrowser
-    webbrowser.open_new_tab(f'{remote_url}/pullrequest/{pr["pullRequestId"]}')
+    from webbrowser import open_new_tab
+    open_new_tab(f'{remote_url}/pullrequest/{pr["pullRequestId"]}')

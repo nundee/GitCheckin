@@ -179,7 +179,13 @@ def unshelve_last(drop=False):
         return git("stash", "pop")
     else:
         return git("stash", "apply")
-    
+
+def find_shelve_ref(commit_hash):
+    ok,lines=git("stash", "list", pretty="%gd %H")
+    if not ok:
+        return None 
+    refs = [r for r,h in [line.split() for line in lines] if h==commit_hash]
+    return refs[0] if refs else None
 
 def log(*args, **kwargs):
     for line in g_git('log', *args, pretty=P_FORMAT, **kwargs):

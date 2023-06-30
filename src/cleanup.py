@@ -1,8 +1,10 @@
+__all__ = ["post_cleanup"]
+
 import os,sys, json, time
 
 LOCKFILE={}
 
-def __ensure_lock():
+def _ensure_lock():
     if "listpath" not in LOCKFILE:
         if sys.platform.startswith("win"):
             lock_dir=os.getenv("LOCALAPPDATA")
@@ -13,17 +15,17 @@ def __ensure_lock():
         LOCKFILE["listpath"]=os.path.join(lock_dir,".git_cleanup.list")
 
 
-def __get_lock_file():
-    __ensure_lock()
+def _get_lock_file():
+    _ensure_lock()
     return LOCKFILE.get("lockpath")
 
-def __get_list_file():
-    __ensure_lock()
+def _get_list_file():
+    _ensure_lock()
     return LOCKFILE.get("listpath")
 
-def __try_lock():
+def _try_lock():
     try:
-        with open(__get_lock_file(), 'x') as lockfile:
+        with open(_get_lock_file(), 'x') as lockfile:
             # write the PID of the current process so you can debug
             # later if a lockfile can be deleted after a program crash
             lockfile.write(str(os.getpid()))
@@ -32,14 +34,14 @@ def __try_lock():
          # file already exists
         return False
 
-def __unlock():
-    os.unlink(__get_lock_file())
+def _unlock():
+    os.unlink(_get_lock_file())
 
 def post_cleanup(repo_dir, tmp_branch, stash_commit, pull_req_id):
     try:
-        while not __try_lock():
+        while not _try_lock():
             time.sleep(1)
-        with open(__get_list_file(),"+at") as fp:
+        with open(_get_list_file(),"+at") as fp:
             data=dict(
                 repo=repo_dir,
                 branch=tmp_branch,
@@ -49,16 +51,16 @@ def post_cleanup(repo_dir, tmp_branch, stash_commit, pull_req_id):
             json.dump(data,fp)
             fp.write("\n")
     finally:
-        __unlock()
+        _unlock()
 
 if __name__=="__main__":
     import devops_api, git
     notify_text=[]
     try:
-        while not __try_lock():
+        while not _try_lock():
             time.sleep(1)
         data=[]
-        with open(__get_list_file(),"rt") as fp:
+        with open(_get_list_file(),"rt") as fp:
             for line in fp.readlines():
                 data.append(json.loads(line))
         delete_list=[]
@@ -68,10 +70,7 @@ if __name__=="__main__":
             stash_ref= None
             ok,shelves=git.list_shelves()
             if ok and len(shelves)>0:
-                stash_refs = [i for i,s in enumerate(shelves) if s["CommitHash"]==task["stash"]]
-                if stash_refs:
-                    stash_ref = "stash@{%d}" % stash_refs[0]
-                
+                stash_ref = git.find_shelve_ref(task["stash"])
             branch_exists=git.local_branch_exists(task["branch"])
             if (stash_ref is not None) or branch_exists:
                 pr_id=task["pull_req"]
@@ -100,14 +99,14 @@ if __name__=="__main__":
             delete_list.reverse()
             for i in delete_list:
                 del data[i]
-            with open(__get_list_file(),"wt") as fp:
+            with open(_get_list_file(),"wt") as fp:
                 for x in data:
                     json.dump(x,fp)
 
     except Exception as ex:
         print(ex)
     finally:
-        __unlock()
+        _unlock()
 
     if notify_text:
         text_lines = "\n".join([text for (text,_) in notify_text])
