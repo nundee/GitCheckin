@@ -240,7 +240,7 @@ if __name__ == "__main__":
     # stash changes
     log("try shelve changes ...")
     changes=[f.Name for f in data.CheckinItems]
-    _, stash_commit=check_error(git.shelve(f"Gated checkin [{data.WorkItem}] {datetime.now()}", changes))
+    _, stash_commit=check_error(git.shelve(f"Gated checkin {datetime.now()} [{data.WorkItem}] ## {data.Comment}", changes))
 
     # create temp branch 
     tmp_branchName=f"tmp_{data.WorkItem}_{stash_commit['CommitHash']}"

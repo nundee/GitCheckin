@@ -3,19 +3,36 @@ from subprocess import Popen,PIPE, run as run_process
 
 ERROR_PREFIX = "__error__: "
 
+def log_error(msg):
+    print(msg,file=sys.stderr)
+
+
 OPTIONS=dict(
     verbose=True,
-    repo_dir=None
+    root_dir=None
 )
+
+def get_root_dir():
+    p=run_process(["git","rev-parse", "--show-toplevel" ],capture_output=True)
+    if p.returncode:
+        return None
+    else:
+        return p.stdout.decode('utf8').strip()
+
+def set_root_dir(dir):
+    OPTIONS["root_dir"]=dir
+
 
 def __prepare_cmd(command, *args, **kwargs):
     cmd_line_args=['git']
-    repo_dir=OPTIONS.get("repo_dir",None)
-    if repo_dir:
-        cmd_line_args+=["-C", repo_dir, command]
-    else:
-        cmd_line_args.append(command)
-    cmd_line_args += list(args)
+    root_dir=OPTIONS.get("root_dir",None)
+    if root_dir is None:
+        root_dir=get_root_dir()
+        set_root_dir(root_dir)
+    if root_dir is None:
+        log_error("not a git repository")
+        sys.exit(-1)
+    cmd_line_args += ["-C", root_dir, command, *args]
     for k,v in kwargs.items():
         cmd_line_args.append(f"--{k}={v}")
     if OPTIONS["verbose"]:
@@ -23,8 +40,6 @@ def __prepare_cmd(command, *args, **kwargs):
     return cmd_line_args
 
 
-def set_repo_dir(dir):
-    OPTIONS["repo_dir"]=dir
 
 def g_git(command, *args, **kwargs):
     cmd_line_args=__prepare_cmd(command,*args,**kwargs)
@@ -50,9 +65,6 @@ def git(command, *args, **kwargs):
         return False, p.stderr.decode('utf8')
     else:
         return True, [s.decode('utf8') for s in p.stdout.splitlines() if len(s)]
-
-def log_error(msg):
-    print(msg,file=sys.stderr)
 
 def status():
     return git('status', '--porcelain')
@@ -134,7 +146,7 @@ def is_branch_merged_into(branch1,branch2):
 FIELD_SEP=">>|<<"
 PRETTY_FORMAT=[
     ("CommitHash","%H"),
-    ("Subject","%s"),
+    ("Subject","%B"),
     ("ParentHashes","%P"),
     ("AuthorName","%an"),
     ("AuthorDate","%aD"),

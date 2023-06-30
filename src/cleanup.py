@@ -64,7 +64,7 @@ if __name__=="__main__":
         delete_list=[]
         for i_task,task in enumerate(data):
             repo_dir=task["repo"]
-            git.set_repo_dir(repo_dir)
+            git.set_root_dir(repo_dir)
             stash_ref= None
             ok,shelves=git.list_shelves()
             if ok and len(shelves)>0:
@@ -90,7 +90,10 @@ if __name__=="__main__":
                             notify_text.append((f'droped shelve {stash_ref}', 'info'))
                         else:
                             notify_text.append((ret,'warn'))
+                else:
+                    print(f"the status of pull request {pr_id} is {pr['status']}")
             else:
+                print("nothing to do for task ",task)
                 delete_list.append(i_task)
 
         if delete_list:
