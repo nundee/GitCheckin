@@ -1,66 +1,62 @@
-from rich.console import RenderableType
-from textual import events
-from textual.app import App, ComposeResult
-from textual.containers import ScrollableContainer
-from textual.reactive import reactive
-from textual.widgets import Button, Footer, Header, Static,Checkbox
-from rich.text import Text, TextType
-from rich.style import Style
-from rich.color import Color
-
 import git
-
-class MyCheckbox(Checkbox):
-    BUTTON_LEFT  = '['
-    BUTTON_RIGHT = ']'
-    BUTTON_INNER = ' '
-
-    def on_mount(self) -> None:
-        self.watch_value(self.value)
-
-    def watch_value(self, v):
-        self.BUTTON_INNER = 'X' if v else ' '
-
-class FileEntry(Static):
-    fname=""
-    status=""
-    def compose(self):
-        yield MyCheckbox()
-
-    def on_mount(self):
-        cb:Checkbox = self.query_one(Checkbox)
-        cb._label = Text.from_markup(f"{self.fname} [i]{self.status}[/i]")
-
-class FileList(Static):
-    def compose(self):
-        yield ScrollableContainer(id="scrollwin")
-
-    async def on_mount(self):
-        container = self.query_one("#scrollwin")
-        files=await git.status()
-        for f in files:
-            fe=FileEntry()
-            fe.fname = f[3:]
-            fe.status= f[:2]
-            container.mount(fe)
-
-class CheckinApp(App):
-    #CSS_PATH = "stopwatch.css"
-
-    #BINDINGS = [
-    #    ("d", "toggle_dark", "Toggle dark mode"),
-    #    ("a", "add_stopwatch", "Add"),
-    #    ("r", "remove_stopwatch", "Remove"),
-    #]
-
-    def compose(self) -> ComposeResult:
-        """Called to add widgets to the app."""
-        yield Header()
-        yield Footer()
-        yield FileList(id="files")
+import os,re
 
 
+def get_commits_related_to_work_item(workItem:int, branch=None, remote=False):
+    commits = []
+    errors=[]
+    if not branch:
+        ok,branch = git.get_current_branch_name()
+        if not ok:
+            git.log_error(branch)
+            return [],[branch]
+    if remote:
+        branch="origin/"+branch
+        if not git.remote_branch_exists(branch):           
+            error=f"remote {branch} does not exist"
+            git.log_error(error)
+            return [],[error]
+    elif not git.local_branch_exists(branch):
+        error=f"local {branch} does not exist"
+        git.log_error(error)
+        return [],[error]
+
+    for obj in git.parse_log(branch):
+        if isinstance(obj,git.ParseError):
+            errors.append(obj.ErrorMessage)
+        elif len(obj.ParentHashes)>1 and  workItem in obj.WorkItems:
+            commits.append(obj)
+    return commits,errors
+
+
+def get_cherry_picked_from(commit:git.Commit):
+    if commit.Body:
+        hashes=re.findall(r'CherryPickedFrom:([0-9a-f]+)\b',commit.Body)
+        return hashes[-1] if hashes else None
+
+def get_integrable_commits(workItem:int, dev_branch="development", main_branch="main"):
+    dev_commits,_=get_commits_related_to_work_item(workItem,dev_branch, remote=True)
+    main_branch_commits,_=get_commits_related_to_work_item(workItem,main_branch, remote=False)
+    cherry_picked_commits = list(filter(None,[get_cherry_picked_from(c) for c in main_branch_commits]))
+    relevant_dev_commits = [c for c in dev_commits if c.Hash not in cherry_picked_commits]
+    return relevant_dev_commits
+
+
+def create_cherry_pick_commit(commit:git.Commit):
+    cherry_pick = git.Commit(
+                    Title=commit.Title, 
+                    Body= commit.Body,
+                    WorkItems=commit.WorkItems,
+                    CherryPickedFrom=commit.Hash)
+    return cherry_pick
 
 if __name__ == "__main__":
-    app = CheckinApp()
-    app.run()
+    from rich import print
+    git.set_root_dir(r'C:\CAMEO\CAMEO_Cumulus')
+    git.set_verbose(True)
+    git.git("fetch", "origin","development")
+    commits = get_integrable_commits(19832,dev_branch="development", main_branch="master")
+    for x in commits:
+        c=create_cherry_pick_commit(x)
+        print(c.Title,c.Body,c.WorkItems)
+        #print(x.AbbrevHash, x.Date, x.Title, x.WorkItems)

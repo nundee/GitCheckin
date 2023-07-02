@@ -1,9 +1,9 @@
+from dataclasses import dataclass
 import git, devops_api,  workitems
 from datetime import datetime
 
-from pydantic import BaseModel
-
-class FileStatus(BaseModel):
+@dataclass
+class FileStatus:
     raw_entry:str
 
     @property
@@ -22,7 +22,8 @@ class FileStatus(BaseModel):
         return str(self)
 
 
-class CheckinModel(BaseModel):
+@dataclass
+class CheckinModel:
     Comment:str
     WorkItem:int
     WorkItemDescription:str
@@ -174,7 +175,7 @@ if __name__ == "__main__":
 
     verbose=not args.quiet
     git.OPTIONS["verbose"]=verbose
-    log = pprint if verbose else lambda x: None
+    log = git.log_info
 
     ok,currentBranch=git.get_current_branch_name()
     if not ok:
@@ -185,13 +186,10 @@ if __name__ == "__main__":
         git.git("switch",currentBranch)
         sys.exit(-1)
 
-    def check_error(ret_tuple, do_exit=True, log_output=True):
-        ok,msg=ret_tuple
+    def check_error(ret_tuple):
+        ok,_=ret_tuple
         if not ok:
-            git.log_error(msg)
-            if do_exit:abort()
-        elif log_output:
-            log(msg)
+            abort()
         return ret_tuple
 
 
@@ -201,7 +199,7 @@ if __name__ == "__main__":
         check_error(git.git("pull"))
 
     # get the actual status
-    _,status_list=check_error(git.status(),log_output=False)
+    _,status_list=check_error(git.status())
 
     data = CheckinModel(
         Comment=args.comment, 
@@ -243,25 +241,28 @@ if __name__ == "__main__":
     _, stash_commit=check_error(git.shelve(f"Gated checkin {datetime.now()} [{data.WorkItem}] ## {data.Comment}", changes))
 
     # create temp branch 
-    tmp_branchName=f"tmp_{data.WorkItem}_{stash_commit['CommitHash']}"
-    ok,_ = check_error(git.git("checkout","-b",tmp_branchName),do_exit=False)
+    tmp_branchName=f"tmp_{data.WorkItem}_{stash_commit.Hash}"
+    ok,_ = git.git("checkout","-b",tmp_branchName)
     if not ok:
         git.git("switch",currentBranch)
         log("unshelve the last change")
         git.unshelve_last(drop=True)
         abort()
 
-    ok,_=check_error(git.unshelve_last(drop=False), do_exit=False)
+    ok,_=git.unshelve_last(drop=False)
     if not ok:
-        ok,ret=check_error(git.git("switch",currentBranch), do_exit=False)
+        ok,ret=git.git("switch",currentBranch)
         if ok:
             log("unshelve the last change")
             git.unshelve_last(drop=True)
         abort()
 
     # commit changes
-    ok,msg=check_error(git.git("add", "--", *changes), do_exit=False)
-    ok,msg=check_error(git.git("commit", "-m", data.Comment+" #"+str(data.WorkItem)), do_exit=False)
+    ok,msg=git.git("add", "--", *changes)
+    commit = git.Commit()
+    git.Commit.parseSubject(data.Comment,commit)
+    commit.WorkItems+=[data.WorkItem]
+    ok,msg=git.git("commit", "-m", commit.asCommitMessage())
     #if not git.is_clean_working_tree():
     #    abort()
     check_error(git.git("fetch","-q", "origin"))
@@ -269,7 +270,7 @@ if __name__ == "__main__":
     ok,msg=check_error(git.git("fetch","-q", "origin", tmp_branchName ))
     ok,msg=check_error(git.git("checkout", tmp_branchName ))
     
-    lastCommit=list(git.log("-n", "1"))[0]
+    lastCommit=list(git.parse_log("-n", "1"))[0]
 
     git.git("switch",currentBranch)
 
@@ -279,14 +280,13 @@ if __name__ == "__main__":
     ok,pr=check_error(devops_api.create_pull_request(remote_url,
                                          tmp_branchName,currentBranch,
                                          data.Comment,
-                                         [lastCommit["CommitHash"]],
+                                         [lastCommit.Hash],
                                          data.WorkItem
-                                         ),
-                                         log_output=False)
+                                         ))
     ok,pr=check_error(devops_api.update_pull_request(remote_url,pr["pullRequestId"]))
 
     from cleanup import post_cleanup
-    post_cleanup(os.getcwd(),tmp_branchName,stash_commit["CommitHash"],pr["pullRequestId"])
+    post_cleanup(git.get_root_dir(),tmp_branchName,stash_commit.Hash,pr["pullRequestId"])
 
     from webbrowser import open_new_tab
     open_new_tab(f'{remote_url}/pullrequest/{pr["pullRequestId"]}')

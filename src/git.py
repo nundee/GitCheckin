@@ -1,10 +1,13 @@
-import sys,os
+import sys
 from subprocess import Popen,PIPE, run as run_process
+from commit_model import ERROR_PREFIX, P_FORMAT, Commit, ParseError, g_parse_log
 
-ERROR_PREFIX = "__error__: "
+from rich import print
 
+def log_info(msg):
+    print(f"[cyan]{msg}[/cyan]",file=sys.stderr)
 def log_error(msg):
-    print(msg,file=sys.stderr)
+    print(f"[red]{msg}[/red]",file=sys.stderr)
 
 
 OPTIONS=dict(
@@ -21,6 +24,8 @@ def get_root_dir():
 
 def set_root_dir(dir):
     OPTIONS["root_dir"]=dir
+def set_verbose(val:bool):
+    OPTIONS["verbose"]=val
 
 
 def __prepare_cmd(command, *args, **kwargs):
@@ -35,19 +40,23 @@ def __prepare_cmd(command, *args, **kwargs):
     cmd_line_args += ["-C", root_dir, command, *args]
     for k,v in kwargs.items():
         cmd_line_args.append(f"--{k}={v}")
-    if OPTIONS["verbose"]:
-        print(cmd_line_args)
+    if OPTIONS.get("verbose",False):
+        print(f"[grey46][i]{' '.join(cmd_line_args)}[/i][/grey46]")
     return cmd_line_args
 
 
 
-def g_git(command, *args, **kwargs):
+def _g_git(command, *args, **kwargs):
     cmd_line_args=__prepare_cmd(command,*args,**kwargs)
+    verbose = OPTIONS.get("verbose",False)
     with Popen(cmd_line_args,stdout=PIPE, stderr=PIPE) as proc:        
         while True:
             buf=proc.stdout.readline()
             if buf:
-                yield buf.decode("utf8").rstrip('\r\n')
+                line = buf.decode("utf8").rstrip('\r\n')
+                if verbose:
+                    print(f":right_arrow: [gold3][i]{line}[/i][/gold3]")
+                yield line
             else:
                 break
         errs = proc.stderr.readlines()
@@ -55,16 +64,24 @@ def g_git(command, *args, **kwargs):
         #print("ret=",ret)
         if ret != 0:
             for buf in errs:
-                yield ERROR_PREFIX + buf.decode("utf8").rstrip('\r\n')
+                err=buf.decode("utf8").rstrip('\r\n')
+                print(f"[red]{err}[/red]")
+                yield ERROR_PREFIX + err
 
 
 def git(command, *args, **kwargs):
     cmd_line_args=__prepare_cmd(command,*args,**kwargs)
     p=run_process(cmd_line_args,capture_output=True)
     if p.returncode:
-        return False, p.stderr.decode('utf8')
+        err = p.stderr.decode('utf8')
+        print(f":red_circle:[red]  {err}[/red]")
+        return False, err
     else:
-        return True, [s.decode('utf8') for s in p.stdout.splitlines() if len(s)]
+        out=p.stdout.decode('utf8')
+        if OPTIONS.get("verbose",False):
+            print(f":right_arrow: [gold3][i]{out}[/i][/gold3]")
+        print(":white_check_mark:")
+        return True, out.splitlines()
 
 def status():
     return git('status', '--porcelain')
@@ -143,27 +160,8 @@ def is_branch_merged_into(branch1,branch2):
     return merge_hash[0] == base_hash[0]
 
 
-FIELD_SEP=">>|<<"
-PRETTY_FORMAT=[
-    ("CommitHash","%H"),
-    ("Subject","%B"),
-    ("ParentHashes","%P"),
-    ("AuthorName","%an"),
-    ("AuthorDate","%aD"),
-    ("RefNames","%d")
-]
-P_FORMAT = FIELD_SEP.join(a for _,a in PRETTY_FORMAT)
-
-
-def __parseLogLine(line):
-    return dict((k,v) for (k,_),v in zip(PRETTY_FORMAT,line.split(FIELD_SEP)))
-
-def list_shelves(*args):
-    ok,lines=git("stash", "list", *args, pretty=P_FORMAT)
-    if ok:
-        return True, [__parseLogLine(l) for l in lines]
-    else:
-        return False,lines
+def list_shelves(*args) -> list[ParseError|Commit]:
+    return list(g_parse_log(_g_git("stash", "list", *args, pretty=P_FORMAT)))
 
 def shelve(message,changes):
     ok, msg=git("stash","push","--include-untracked", 
@@ -171,8 +169,8 @@ def shelve(message,changes):
                 "--", *changes)
     if not ok:
         return False,msg
-    ok,shelves = list_shelves("-n", "1")
-    return (True,shelves[0]) if ok else (False,shelves)
+    shelves = list_shelves("-n", "1")
+    return (True,shelves[0]) if shelves else (False,shelves)
 
 def unshelve_last(drop=False):
     if drop:
@@ -187,24 +185,24 @@ def find_shelve_ref(commit_hash):
     refs = [r for r,h in [line.split() for line in lines] if h==commit_hash]
     return refs[0] if refs else None
 
-def log(*args, **kwargs):
-    for line in g_git('log', *args, pretty=P_FORMAT, **kwargs):
-        if line.startswith(ERROR_PREFIX):
-            yield dict(Error=line[len(ERROR_PREFIX):])
-        else:
-            yield __parseLogLine(line)
+
+def parse_log(*args, **kwargs):
+    return g_parse_log(_g_git('log', *args, pretty=P_FORMAT, **kwargs))
 
 if __name__=="__main__":
     from pprint import pprint
     def main():
+        set_root_dir(r'C:\CAMEO\CAMEO_Cumulus')
         print("current branch is", get_current_branch_name())
         print("status")
-        for line in status():
+        for line in status()[1]:
             print (line)
-        # for commit in log():
-        #     if "Error" in commit:
-        #         pprint(commit)
-        #     elif " #1" in commit["Subject"]:
-        #         pprint(commit)
+        
+        # for commit in list_shelves():
+        #     pprint(commit)
+
+
+        for commit in parse_log("-n", "6"):
+            pprint(commit)
 
     main()

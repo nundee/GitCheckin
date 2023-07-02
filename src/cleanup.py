@@ -68,15 +68,16 @@ if __name__=="__main__":
             repo_dir=task["repo"]
             git.set_root_dir(repo_dir)
             stash_ref= None
-            ok,shelves=git.list_shelves()
-            if ok and len(shelves)>0:
+            shelves=git.list_shelves()
+            if len(shelves)>0:
                 stash_ref = git.find_shelve_ref(task["stash"])
             branch_exists=git.local_branch_exists(task["branch"])
             if (stash_ref is not None) or branch_exists:
                 pr_id=task["pull_req"]
                 ok,pr=devops_api.get_pull_request_by_id(pr_id)
-                if ok and pr["status"]=="completed":
-                    notify_text.append((f"pull request {pr['title']} is completed","info"))
+                pr_status=pr["status"]
+                if ok and pr_status in ("completed", "abandoned"):
+                    notify_text.append((f"pull request {pr['title']} is {pr_status}","info"))
                     if branch_exists:
                         ok,ret=git.git("branch", "-D", task["branch"])
                         if ok:
@@ -90,7 +91,7 @@ if __name__=="__main__":
                         else:
                             notify_text.append((ret,'warn'))
                 else:
-                    print(f"the status of pull request {pr_id} is {pr['status']}")
+                    print(f"the status of pull request {pr_id} is {pr_status}")
             else:
                 print("nothing to do for task ",task)
                 delete_list.append(i_task)
@@ -102,6 +103,7 @@ if __name__=="__main__":
             with open(_get_list_file(),"wt") as fp:
                 for x in data:
                     json.dump(x,fp)
+                    fp.write(os.linesep)
 
     except Exception as ex:
         print(ex)
