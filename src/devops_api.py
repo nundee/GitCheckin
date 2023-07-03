@@ -3,7 +3,7 @@ from functools import cache
 from joblib import Memory
 from cache_dir import *
 
-memory=Memory(get_cache_dir(), verbose=1)
+memory=Memory(get_cache_dir(), verbose=0)
 
 CONFIG={}
 

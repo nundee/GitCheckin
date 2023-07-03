@@ -1,7 +1,6 @@
 from PySide6 import QtCore, QtGui
-from PySide6.QtCore import Qt, QModelIndex, QTimer
+from PySide6.QtCore import Qt, QModelIndex, Slot
 from PySide6.QtWidgets import QApplication, QDialog, QCompleter
-from PySide6.QtCore import Signal, Slot
 
 from integrate_ui import Ui_Dialog
 from devops_api import get_identities, get_my_identity
@@ -9,7 +8,7 @@ from devops_api import get_identities, get_my_identity
 class UserView(QtCore.QAbstractListModel):
     def __init__(self):
             super().__init__()           
-            self.user_list =  [] #[get_my_identity()] #get_identities("a")
+            self.user_list =  []
             self.ids=set()
             self.partial_text=""
             self.partial_text_changed=False
@@ -18,7 +17,7 @@ class UserView(QtCore.QAbstractListModel):
         if text != self.partial_text:
             self.partial_text=text
             self.partial_text_changed=True
-            self.layoutChanged.emit()
+            #self.layoutChanged.emit()
 
     def data(self, index, role):
         if role == Qt.DisplayRole:
@@ -69,9 +68,6 @@ class IntegrateDialog(QDialog):
         self.completer.setFilterMode(Qt.MatchFlag.MatchContains)
         ui.lineEditIntegrator.setCompleter(self.completer)
         ui.lineEditIntegrator.textChanged.connect(self.onIntegraterChanged)
-        # self.editTimer=QTimer()
-        # self.editTimer.setSingleShot(True)
-        # self.editTimer.timeout.connect(self.onTimerDone)
 
     @Slot()
     def onIntegraterChanged(self):
@@ -85,11 +81,6 @@ class IntegrateDialog(QDialog):
         else:
             text=text.split(",")[0].strip()
             self.model.set_partial_text(text)
-            #self.editTimer.start(300)
-
-    # @Slot()
-    # def onTimerDone(self):
-    #     self.model.set_partial_text(self.ui.lineEditIntegrator.text())
 
 
 if __name__=="__main__":
