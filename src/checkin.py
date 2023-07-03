@@ -32,7 +32,7 @@ class CheckinModel:
 
 
 def showGui(data:CheckinModel):
-    from PySide6 import QtCore, QtGui, QtWidgets
+    from PySide6 import QtCore, QtGui
     from PySide6.QtCore import Qt, QCoreApplication
     from PySide6.QtWidgets import QApplication, QDialog
     from PySide6.QtCore import Slot
@@ -151,7 +151,7 @@ def showGui(data:CheckinModel):
             self.notifyChanges()
 
 
-    qapp=QApplication()
+    _=QApplication()
     app = CheckinDialog()
     return app.exec()
 
@@ -169,13 +169,11 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--work-item", type=int, default=0)
     parser.add_argument("-c", "--comment", type=str, default="")
     parser.add_argument("--no-pull", action="store_true", default=False)
-    parser.add_argument("-q", "--quiet", action="store_true", default=False)
+    parser.add_argument("-v", "--verbose", action="store_true", default=False)
 
     args,checkin_list=parser.parse_known_args(sys.argv[1:])
 
-    verbose=not args.quiet
-    git.OPTIONS["verbose"]=verbose
-    log = git.log_info
+    git.OPTIONS["verbose"]=args.verbose
 
     ok,currentBranch=git.get_current_branch_name()
     if not ok:
@@ -195,7 +193,7 @@ if __name__ == "__main__":
 
     if not args.no_pull:
         # make a pull
-        log("try to pull from origin ...")
+        git.log_info("try to pull from origin ...")
         check_error(git.git("pull"))
 
     # get the actual status
@@ -236,31 +234,35 @@ if __name__ == "__main__":
             abort()
 
     # stash changes
-    log("try shelve changes ...")
+    git.log_info("try shelve changes ...")
     changes=[f.Name for f in data.CheckinItems]
     _, stash_commit=check_error(git.shelve(f"Gated checkin {datetime.now()} [{data.WorkItem}] ## {data.Comment}", changes))
 
     # create temp branch 
     tmp_branchName=f"tmp_{data.WorkItem}_{stash_commit.Hash}"
+    git.log_info("create and switch to temporary branch "+tmp_branchName)
     ok,_ = git.git("checkout","-b",tmp_branchName)
     if not ok:
         git.git("switch",currentBranch)
-        log("unshelve the last change")
+        git.log_info("unshelve the last change")
         git.unshelve_last(drop=True)
         abort()
 
+    git.log_info("unshelve the last change")
     ok,_=git.unshelve_last(drop=False)
     if not ok:
+        git.log_info("switch back to dev")
         ok,ret=git.git("switch",currentBranch)
         if ok:
-            log("unshelve the last change")
+            git.log_info("unshelve the last change")
             git.unshelve_last(drop=True)
         abort()
 
     # commit changes
+    git.log_info("commit changes to temp branch")
     ok,msg=git.git("add", "--", *changes)
     commit = git.Commit()
-    git.Commit.parseSubject(data.Comment,commit)
+    commit.parseSubject(data.Comment)
     commit.WorkItems+=[data.WorkItem]
     ok,msg=git.git("commit", "-m", commit.asCommitMessage())
     #if not git.is_clean_working_tree():
@@ -270,13 +272,15 @@ if __name__ == "__main__":
     ok,msg=check_error(git.git("fetch","-q", "origin", tmp_branchName ))
     ok,msg=check_error(git.git("checkout", tmp_branchName ))
     
+    git.log_info("get the created commit")
     lastCommit=list(git.parse_log("-n", "1"))[0]
 
     git.git("switch",currentBranch)
 
     # create pull request
     remote_url=git.get_remote_url()
-    log(f"remote url is {remote_url}")
+    git.log_info(f"remote url is {remote_url}")
+    git.log_info("create pull request ...")
     ok,pr=check_error(devops_api.create_pull_request(remote_url,
                                          tmp_branchName,currentBranch,
                                          data.Comment,
@@ -289,4 +293,5 @@ if __name__ == "__main__":
     post_cleanup(git.get_root_dir(),tmp_branchName,stash_commit.Hash,pr["pullRequestId"])
 
     from webbrowser import open_new_tab
+    git.log_info("I will redirect you to the devops web page. Please have a look at your pull request")
     open_new_tab(f'{remote_url}/pullrequest/{pr["pullRequestId"]}')

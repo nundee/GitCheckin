@@ -1,19 +1,14 @@
 __all__ = ["post_cleanup"]
 
 import os,sys, json, time
-
+from cache_dir import *
 LOCKFILE={}
 
 def _ensure_lock():
     if "listpath" not in LOCKFILE:
-        if sys.platform.startswith("win"):
-            lock_dir=os.getenv("LOCALAPPDATA")
-        else:
-            lock_dir=os.path.join(os.getenv("HOME"),".local")
-        os.makedirs(lock_dir,exist_ok=True)
+        lock_dir=get_cache_dir()
         LOCKFILE["lockpath"]=os.path.join(lock_dir,".git_cleanup.lockfile")
         LOCKFILE["listpath"]=os.path.join(lock_dir,".git_cleanup.list")
-
 
 def _get_lock_file():
     _ensure_lock()

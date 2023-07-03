@@ -53,10 +53,12 @@ def create_cherry_pick_commit(commit:git.Commit):
 if __name__ == "__main__":
     from rich import print
     git.set_root_dir(r'C:\CAMEO\CAMEO_Cumulus')
-    git.set_verbose(True)
+    git.set_verbose(False)
+    git.log_info("fetch origin")
     git.git("fetch", "origin","development")
+    git.log_info("get integrable commits ...")
     commits = get_integrable_commits(19832,dev_branch="development", main_branch="master")
     for x in commits:
         c=create_cherry_pick_commit(x)
-        print(c.Title,c.Body,c.WorkItems)
+        print(c.asCommitMessage())
         #print(x.AbbrevHash, x.Date, x.Title, x.WorkItems)

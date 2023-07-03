@@ -1,5 +1,9 @@
 import yaml,json,os,httpx
 from functools import cache
+from joblib import Memory
+from cache_dir import *
+
+memory=Memory(get_cache_dir(), verbose=1)
 
 CONFIG={}
 
@@ -28,9 +32,14 @@ def api_call(cli:str, route:str, method:str="get", body=None, **params):
             rsp=client.patch(url,json=body,params=params, auth=auth)
         else:
             return False,"unknown method"
-        try:
+        
+        ct_e=rsp.charset_encoding
+
+        if ct_e is None:
+            ret=rsp.content
+        elif "application/json" in rsp.headers.get("Content-Type"):
             ret=rsp.json()
-        except:
+        else:
             ret=rsp.text
         return rsp.is_success,ret    
 
@@ -61,7 +70,19 @@ def get_repo_by_url(url):
         r_list=[r for r in repos if r["webUrl"]==url]
         return r_list[0] if r_list else None
 
-@cache
+
+def _get_avatar_(subj_desc):
+    params={
+        "api-version":"6.0-preview",
+        "project_in_url":False
+        }
+
+    ok,ret=api_call("GraphProfile","MemberAvatars/"+subj_desc, **params)
+    if ok:
+        return ret
+
+
+@memory.cache
 def get_identities(name):
     params={
         "api-version":"6.0-preview",
@@ -73,11 +94,14 @@ def get_identities(name):
                         "identityTypes":["user"],
                         "operationScopes":["ims","source"],
                         "options":{"MinResults":5,"MaxResults":400},
-                        "properties":[" DisplayName", "Mail"]
+                        "properties":["DisplayName", "Mail", "SubjectDescriptor"]
                     }
                 )
     if ok:
-        return ret["results"][0]["identities"]
+        identities= ret["results"][0]["identities"]
+        for i in identities:
+            i["avatar"]=_get_avatar_(i["subjectDescriptor"])
+        return identities
 
 def get_my_identity():
     ret= get_identities(os.getlogin())
@@ -136,11 +160,17 @@ def get_pull_request_by_id(pull_req_id):
     return git_api_call(f"pullrequests/{pull_req_id}")
 
 if __name__=="__main__":
+    import sys
     from pprint import pprint
     TEST_REPO="https://tfs.avl.com/Cameo/CAMEO3/_git/Playground"
     
     def test1():
         pprint(git_api_call("repositories"))
+
+    def test_get_identity():
+        obj=get_identities(sys.argv[1] if len(sys.argv)>1 else os.getlogin())
+        print(obj)
+
 
     def test_my_identity():
         pprint(get_my_identity())
@@ -161,4 +191,5 @@ if __name__=="__main__":
 
     #test_my_identity()
     #test_create_pull_req()
-    test_get_pull_req(724)
+    #test_get_pull_req(724)
+    test_get_identity()

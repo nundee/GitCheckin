@@ -68,9 +68,13 @@ class Commit:
 
         if workItems:
             workItems = list(set(int(w) for w in workItems))
-        cherry_picked=re.findall(r'CherryPickedFrom:\s*([0-9a-f])')
-        if cherry_picked:
-            self.CherryPickedFrom=cherry_picked
+        if body:
+            m=re.search(r'\s*CherryPickedFrom:\s*([0-9a-f]+)\b',body)
+            if m:
+                self.CherryPickedFrom=m[0]
+                s,e=m.span()
+                body=body[:s]+body[e:]
+
         self.Title=title
         self.Body=body
         self.WorkItems=workItems
@@ -79,15 +83,13 @@ class Commit:
     def parse(text:str):
         commit=Commit()
         obj = dict((k,v) for (k,_),v in zip(PRETTY_FORMAT,text.split(FIELD_SEP)))
+        commit.Hash = obj["Hash"]
         commit.Author = obj["Author"]
         commit.Date = datetime.fromtimestamp(int(obj["Date"]))
         commit.ParentHashes=obj["ParentHashes"].split()
         commit.parseSubject(obj["Subject"])
 
-        del obj["Subject"]
-
-        return Commit(**obj)
-
+        return commit
 
 def g_parse_log(_generator):
     log_text=[]

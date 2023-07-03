@@ -48,14 +48,11 @@ def __prepare_cmd(command, *args, **kwargs):
 
 def _g_git(command, *args, **kwargs):
     cmd_line_args=__prepare_cmd(command,*args,**kwargs)
-    verbose = OPTIONS.get("verbose",False)
     with Popen(cmd_line_args,stdout=PIPE, stderr=PIPE) as proc:        
         while True:
             buf=proc.stdout.readline()
             if buf:
                 line = buf.decode("utf8").rstrip('\r\n')
-                if verbose:
-                    print(f":right_arrow: [gold3][i]{line}[/i][/gold3]")
                 yield line
             else:
                 break
