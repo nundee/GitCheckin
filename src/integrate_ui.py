@@ -15,54 +15,98 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
-    QHBoxLayout, QLabel, QLineEdit, QSizePolicy,
+from PySide6.QtWidgets import (QApplication, QDialog, QFrame, QGroupBox,
+    QHBoxLayout, QLabel, QLineEdit, QListView,
+    QPushButton, QSizePolicy, QSpacerItem, QVBoxLayout,
     QWidget)
+import git_icon_rc
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(400, 300)
-        self.buttonBox = QDialogButtonBox(Dialog)
-        self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setGeometry(QRect(30, 240, 341, 32))
-        self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-        self.widget = QWidget(Dialog)
-        self.widget.setObjectName(u"widget")
-        self.widget.setGeometry(QRect(10, 20, 291, 24))
-        self.horizontalLayout = QHBoxLayout(self.widget)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.label = QLabel(self.widget)
-        self.label.setObjectName(u"label")
+        Dialog.resize(529, 682)
+        icon = QIcon()
+        icon.addFile(u":/git-icon/Git-Icon-1788C.png", QSize(), QIcon.Normal, QIcon.Off)
+        Dialog.setWindowIcon(icon)
+        self.verticalLayout_2 = QVBoxLayout(Dialog)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.workItemWidgetFrame = QFrame(Dialog)
+        self.workItemWidgetFrame.setObjectName(u"workItemWidgetFrame")
+        self.workItemWidgetFrame.setFrameShape(QFrame.StyledPanel)
+        self.workItemWidgetFrame.setFrameShadow(QFrame.Raised)
 
-        self.horizontalLayout.addWidget(self.label)
+        self.verticalLayout_2.addWidget(self.workItemWidgetFrame)
 
-        self.labelAvatar = QLabel(self.widget)
+        self.groupBox = QGroupBox(Dialog)
+        self.groupBox.setObjectName(u"groupBox")
+        self.verticalLayout = QVBoxLayout(self.groupBox)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.lvCommits = QListView(self.groupBox)
+        self.lvCommits.setObjectName(u"lvCommits")
+
+        self.verticalLayout.addWidget(self.lvCommits)
+
+
+        self.verticalLayout_2.addWidget(self.groupBox)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.label_2 = QLabel(Dialog)
+        self.label_2.setObjectName(u"label_2")
+
+        self.horizontalLayout_2.addWidget(self.label_2)
+
+        self.labelAvatar = QLabel(Dialog)
         self.labelAvatar.setObjectName(u"labelAvatar")
         self.labelAvatar.setMaximumSize(QSize(32, 32))
         self.labelAvatar.setScaledContents(True)
 
-        self.horizontalLayout.addWidget(self.labelAvatar)
+        self.horizontalLayout_2.addWidget(self.labelAvatar)
 
-        self.lineEditIntegrator = QLineEdit(self.widget)
+        self.lineEditIntegrator = QLineEdit(Dialog)
         self.lineEditIntegrator.setObjectName(u"lineEditIntegrator")
 
-        self.horizontalLayout.addWidget(self.lineEditIntegrator)
+        self.horizontalLayout_2.addWidget(self.lineEditIntegrator)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
+
+        self.horizontalLayoutButtons = QHBoxLayout()
+        self.horizontalLayoutButtons.setObjectName(u"horizontalLayoutButtons")
+        self.pbIntegrate = QPushButton(Dialog)
+        self.pbIntegrate.setObjectName(u"pbIntegrate")
+        self.pbIntegrate.setAutoDefault(False)
+
+        self.horizontalLayoutButtons.addWidget(self.pbIntegrate)
+
+        self.pbCancel = QPushButton(Dialog)
+        self.pbCancel.setObjectName(u"pbCancel")
+        self.pbCancel.setAutoDefault(False)
+
+        self.horizontalLayoutButtons.addWidget(self.pbCancel)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayoutButtons.addItem(self.horizontalSpacer)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayoutButtons)
 
 
         self.retranslateUi(Dialog)
-        self.buttonBox.accepted.connect(Dialog.accept)
-        self.buttonBox.rejected.connect(Dialog.reject)
+        self.pbIntegrate.clicked.connect(Dialog.accept)
+        self.pbCancel.clicked.connect(Dialog.reject)
 
         QMetaObject.connectSlotsByName(Dialog)
     # setupUi
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Dialog", None))
-        self.label.setText(QCoreApplication.translate("Dialog", u"Integrator", None))
+        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Integrate work item", None))
+        self.groupBox.setTitle(QCoreApplication.translate("Dialog", u"Intergrable commits", None))
+        self.label_2.setText(QCoreApplication.translate("Dialog", u"Integrator", None))
         self.labelAvatar.setText("")
+        self.pbIntegrate.setText(QCoreApplication.translate("Dialog", u"Integrate", None))
+        self.pbCancel.setText(QCoreApplication.translate("Dialog", u"Cancel", None))
     # retranslateUi
 

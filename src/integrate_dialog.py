@@ -3,7 +3,8 @@ from PySide6.QtCore import Qt, QModelIndex, Slot
 from PySide6.QtWidgets import QApplication, QDialog, QCompleter
 
 from integrate_ui import Ui_Dialog
-from devops_api import get_identities, get_my_identity
+from workItemWidget import WorkItemWidget, WorkItemModel
+from devops_api import get_identities
 
 class UserView(QtCore.QAbstractListModel):
     def __init__(self):
@@ -61,6 +62,8 @@ class IntegrateDialog(QDialog):
         ui=Ui_Dialog()
         self.ui=ui
         ui.setupUi(self)
+        self.workItem=WorkItemWidget(ui.workItemWidgetFrame)        
+        self.workItem.signals.workItemChanged.connect(self.onWorkitemChanged)
         self.model=UserView()
         self.completer = QCompleter(self)
         self.completer.setModel(self.model)
@@ -68,6 +71,10 @@ class IntegrateDialog(QDialog):
         self.completer.setFilterMode(Qt.MatchFlag.MatchContains)
         ui.lineEditIntegrator.setCompleter(self.completer)
         ui.lineEditIntegrator.textChanged.connect(self.onIntegraterChanged)
+
+    @Slot(WorkItemModel)
+    def onWorkitemChanged(self,wi):
+        print(wi)
 
     @Slot()
     def onIntegraterChanged(self):

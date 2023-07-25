@@ -41,7 +41,10 @@ class Commit:
         return self.Hash[:8]
 
     def asCommitMessage(self):
-        msg = "%s #%d" % (self.Title,self.WorkItems[-1])
+        wi=' #%d' % self.WorkItems[-1]
+        msg=self.Title
+        if not msg.endswith(wi):
+            msg += wi
         if self.Body:
             msg += (os.linesep+os.linesep+self.Body)
         if self.CherryPickedFrom:
