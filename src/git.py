@@ -127,10 +127,10 @@ def is_clean_working_tree():
         return False
 
     # Check for Uncommited changes
-    ok,msg=git("diff-index", "--cached", "--quiet", "--ignore-submodules HEAD --")
-    if not ok:
-        log_error(msg)
-        return False
+    #ok,msg=git("diff-index", "--cached", "--quiet", "--ignore-submodules HEAD --")
+    #if not ok:
+    #    log_error(msg)
+    #    return False
 
     return True
 
@@ -203,6 +203,18 @@ def get_commits_related_to_work_item(workItem:int, localBranch, remoteBranch):
         error=f"local {localBranch} does not exist"
         log_error(error)
         return [],[error]
+
+    origin,devBranch=remoteBranch.split('/',maxsplit=2)
+    ok,ret=git("switch",devBranch)
+    if not ok:return [],[ret]
+    ok,ret=git("fetch", origin,devBranch)
+    if not ok:return [],[ret]
+    ok,ret=git("switch",localBranch)
+    if not ok:return [],[ret]
+    if not is_clean_working_tree():
+        return [],[]
+    ok,ret=git("pull")
+    if not ok:return [],[ret]
 
     for obj in parse_log(f'{localBranch}..{remoteBranch}', '--grep=#%d' % workItem, '--left-right', '--cherry-pick'):
         if isinstance(obj,ParseError):

@@ -96,7 +96,7 @@ class Commit:
         if workItems:
             workItems = list(set(int(w) for w in workItems))
         if body:
-            m=re.search(r'\s*CherryPickedFrom:\s*([0-9a-f]+)\b',body)
+            m=re.search(r'\(cherry\spicked\sfrom\scommit\s([0-9a-f]+)\)',body)
             if m:
                 self.CherryPickedFrom=m[0]
                 s,e=m.span()
