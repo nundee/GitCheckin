@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
-import json,os
+import os
 import re
-#from pydantic import BaseModel
 from datetime import datetime
+from string import Template
 
 ERROR_PREFIX = "__error__: "
 
@@ -23,6 +23,30 @@ P_FORMAT = FIELD_SEP.join(a for _,a in PRETTY_FORMAT) + LOG_SEP
 @dataclass
 class ParseError:
     ErrorMessage:str = ""
+
+
+htmlTemplate=Template('''
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+<html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" />
+<style type="text/css">
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: "\2610"; }
+li.checked::marker { content: "\2612"; }
+</style>
+</head>
+<body style=" font-family:'Calibri'; font-size:9pt;">
+<h2 style=" color:#0000ff;"> ${Title} </h2>
+<p> ${Body} </p>
+<ul>
+<li> Work item: <b> ${WorkItem} </b></li>
+<li> Author: <b><span style=" color:#008000;"> ${Author} </span></b></li>
+<li> Date: <b><span style=" color:#008000;"> ${Date} </span></b></li>
+<li> Commit hash: <b> ${Hash} </b></li>
+</ul>
+</body></html>
+''')
+
 
 @dataclass
 class Commit:
@@ -94,6 +118,17 @@ class Commit:
 
         return commit
 
+    def toHtml(self):
+        return htmlTemplate.substitute(
+            Title=self.Title,
+            Body=str(self.Body) if self.Body else '',
+            WorkItem=self.WorkItems[-1],
+            Author=self.Author,
+            Date=self.Date,
+            Hash = self.Hash
+        )
+
+
 def g_parse_log(_generator):
     log_text=[]
     for line in _generator:
@@ -106,3 +141,39 @@ def g_parse_log(_generator):
             yield Commit.parse(text)
         else:
             log_text.append(line)
+
+
+@dataclass
+class FileStatus:
+    raw_entry:str
+
+    @property
+    def Name(self):
+        return self.raw_entry[3:]
+    
+    @property
+    def Status(self):
+        s = self.raw_entry[:2]
+        return ' U' if s=='??' else s
+
+    def __str__(self) -> str:
+        return self.Status + '   '+ self.Name
+
+    def __repr__(self) -> str:
+        return str(self)
+
+@dataclass
+class CheckinModel:
+    Comment:str
+    WorkItem:int
+    WorkItemDescription:str
+    PendingChanges:list[FileStatus]
+    CheckinItems:list[FileStatus]
+
+@dataclass
+class IntegrateModel:
+    WorkItem:int = -1
+    Commits:list[Commit] = field(default_factory=list)
+    MainBranch:str = "main"
+    DevBranch:str = "development"
+    Integrator:str = ""

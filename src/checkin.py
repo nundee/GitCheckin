@@ -1,35 +1,6 @@
-from dataclasses import dataclass
 import git, devops_api,  workitems
 from datetime import datetime
-
-@dataclass
-class FileStatus:
-    raw_entry:str
-
-    @property
-    def Name(self):
-        return self.raw_entry[3:]
-    
-    @property
-    def Status(self):
-        s = self.raw_entry[:2]
-        return ' U' if s=='??' else s
-
-    def __str__(self) -> str:
-        return self.Status + '   '+ self.Name
-
-    def __repr__(self) -> str:
-        return str(self)
-
-
-@dataclass
-class CheckinModel:
-    Comment:str
-    WorkItem:int
-    WorkItemDescription:str
-    PendingChanges:list[FileStatus]
-    CheckinItems:list[FileStatus]
-
+from models import CheckinModel,FileStatus
 
 def showGui(data:CheckinModel):
     from PySide6 import QtCore, QtGui
@@ -158,9 +129,8 @@ def showGui(data:CheckinModel):
 
 
 if __name__ == "__main__":
-    import sys,os
+    import sys
     import argparse
-    from pprint import pprint
     parser = argparse.ArgumentParser(
         prog="git checkin",
         description="check in pending changes to azure dev ops"

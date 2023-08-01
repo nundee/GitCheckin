@@ -1,10 +1,12 @@
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt, QModelIndex, Slot
-from PySide6.QtWidgets import QApplication, QDialog, QCompleter
+from PySide6.QtWidgets import QApplication, QDialog,QComboBox, QCompleter, QStyledItemDelegate, QStyle
 
 from integrate_ui import Ui_Dialog
 from workItemWidget import WorkItemWidget, WorkItemModel
 from devops_api import get_identities
+from models import Commit, IntegrateModel
+import git
 
 class UserView(QtCore.QAbstractListModel):
     def __init__(self):
@@ -56,41 +58,134 @@ class UserView(QtCore.QAbstractListModel):
 
                 self.endInsertRows()
 
+
+class CommitView(QtCore.QAbstractListModel):
+    def __init__(self):
+            super().__init__()           
+            self.commits =  []
+            self.texts=[]
+
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            return self.commits[index.row()], self.texts[index.row()]
+            #return self.commits[index.row()].toMarkdown()
+
+    def rowCount(self, index):
+        return len(self.commits)
+
+
+    def setData(self,commit_list:list[Commit]):
+        def mkTD(commit:Commit):
+            td=QtGui.QTextDocument()
+            #td.setMarkdown(commit.toMarkdown())#, QtGui.QTextDocument.MarkdownFeature.MarkdownDialectCommonMark)
+            td.setHtml(commit.toHtml())
+            return td
+
+        self.commits=commit_list
+        self.texts = [mkTD(c) for c in self.commits]
+        self.layoutChanged.emit()
+
+
+
+
+class CommitDelegate(QStyledItemDelegate):
+    oddColor=QtGui.QColor("lightcyan")
+    selectedColor=QtGui.QColor("lightgray")
+    def paint(self, painter: QtGui.QPainter, option, index: QModelIndex) -> None:
+        _, td=index.data()
+        painter.save()
+        self.initStyleOption(option,index)
+        if option.state & QStyle.State_Selected:
+            painter.fillRect(option.rect, self.selectedColor)
+        elif index.row() % 2 == 1:
+            painter.fillRect(option.rect, self.oddColor)
+        painter.translate(option.rect.x(),option.rect.y())
+        td.drawContents(painter)
+        painter.restore()
+
+    def sizeHint(self, option, index: QModelIndex):
+        _, td=index.data()
+        sz=td.size().toSize()
+        return sz
+
 class IntegrateDialog(QDialog):
-    def __init__(self, parent=None) -> None:
+    def __init__(self, iModel:IntegrateModel, parent=None) -> None:
         super().__init__(parent)
         ui=Ui_Dialog()
+        self.iModel=iModel
         self.ui=ui
         ui.setupUi(self)
-        self.workItem=WorkItemWidget(ui.workItemWidgetFrame)        
+        self._selectBranches()
+        self.workItem=WorkItemWidget(ui.workItemWidgetFrame)
         self.workItem.signals.workItemChanged.connect(self.onWorkitemChanged)
-        self.model=UserView()
+        self.commitModel=CommitView()
+        self.ui.lvCommits.setModel(self.commitModel)
+        self.ui.lvCommits.setItemDelegate(CommitDelegate())
+        self.ui.lvCommits.selectionModel().selectionChanged.connect(self.onCommitClicked)
+        #self.ui.lvCommits.clicked.connect(self.onCommitClicked)
+        self.userModel=UserView()
         self.completer = QCompleter(self)
-        self.completer.setModel(self.model)
+        self.completer.setModel(self.userModel)
         self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.completer.setFilterMode(Qt.MatchFlag.MatchContains)
         ui.lineEditIntegrator.setCompleter(self.completer)
         ui.lineEditIntegrator.textChanged.connect(self.onIntegraterChanged)
+        self.workItem.setWorkItem(iModel.WorkItem)
+
+
+    def _selectBranches(self):
+        def selectBranch(cb:QComboBox,branches:list[str],branch_candidates:list[str]):
+            cb.setModel(model:=QtCore.QStringListModel(branches))
+            for branch in branch_candidates:
+                try:
+                    cb.setCurrentIndex(branches.index(branch))
+                    return cb.currentIndex()
+                except ValueError:
+                    pass
+            return 0
+
+        i_remote=selectBranch(self.ui.comboBoxDevBranch,git.remote_branches(),["origin/development"])
+        i_local=selectBranch(self.ui.comboBoxMainBranch,git.local_branches(),["main","master"])
+        self.iModel.DevBranch=self.ui.comboBoxDevBranch.model().stringList()[i_remote]
+        self.iModel.MainBranch=self.ui.comboBoxMainBranch.model().stringList()[i_local]
 
     @Slot(WorkItemModel)
     def onWorkitemChanged(self,wi):
-        print(wi)
+        commits,errors=git.get_commits_related_to_work_item(wi.WorkItem,"master","origin/development")
+        self.iModel.Commits=commits
+        self.commitModel.setData(commits)
+        self.ui.lvCommits.selectionModel().setCurrentIndex(self.commitModel.index(0),QtCore.QItemSelectionModel.SelectionFlag.Select)
+        
+
+    @Slot()
+    def onCommitClicked(self):
+        index:QModelIndex = self.ui.lvCommits.selectionModel().currentIndex()
+        commit,_ = index.data()
+        url=f"{git.get_remote_url()}/commit/{commit.Hash}?refName=refs%2Fheads%2F{self.iModel.DevBranch}"
+        print("open", url)
+        self.ui.webEngineView.setUrl(url)
 
     @Slot()
     def onIntegraterChanged(self):
         text= self.ui.lineEditIntegrator.text().strip()
         if len(text)<3:
             return
-        user = [u for u in self.model.user_list if u["displayName"]==text]
+        user = [u for u in self.userModel.user_list if u["displayName"]==text]
         if user:
             pix=user[0]["pixmap"]
             self.ui.labelAvatar.setPixmap(pix)
         else:
             text=text.split(",")[0].strip()
-            self.model.set_partial_text(text)
+            self.userModel.set_partial_text(text)
+
+
+def showGui(model:IntegrateModel):
+    _=QApplication()
+    app = IntegrateDialog(model)
+    return app.exec()
 
 
 if __name__=="__main__":
-    _=QApplication()
-    app = IntegrateDialog()
-    app.exec()
+    git.set_root_dir(r'C:\CAMEO\CAMEO_Cumulus')
+    model=IntegrateModel()#WorkItem=19825)
+    showGui(model)

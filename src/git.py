@@ -1,6 +1,6 @@
 import sys
 from subprocess import Popen,PIPE, run as run_process
-from commit_model import ERROR_PREFIX, P_FORMAT, Commit, ParseError, g_parse_log
+from models import ERROR_PREFIX, P_FORMAT, Commit, ParseError, g_parse_log
 
 from rich import print
 
@@ -185,6 +185,33 @@ def find_shelve_ref(commit_hash):
 
 def parse_log(*args, **kwargs):
     return g_parse_log(_g_git('log', *args, pretty=P_FORMAT, **kwargs))
+
+
+def get_commits_related_to_work_item(workItem:int, localBranch, remoteBranch):
+    commits = []
+    errors=[]
+    if not localBranch:
+        ok,localBranch = get_current_branch_name()
+        if not ok:
+            log_error(localBranch)
+            return [],[localBranch]
+    if not remote_branch_exists(remoteBranch):           
+            error=f"remote {remoteBranch} does not exist"
+            log_error(error)
+            return [],[error]
+    elif not local_branch_exists(localBranch):
+        error=f"local {localBranch} does not exist"
+        log_error(error)
+        return [],[error]
+
+    for obj in parse_log(f'{localBranch}..{remoteBranch}', '--grep=#%d' % workItem, '--left-right', '--cherry-pick'):
+        if isinstance(obj,ParseError):
+            errors.append(obj.ErrorMessage)
+        elif len(obj.ParentHashes)>1 and  workItem in obj.WorkItems:
+            commits.append(obj)
+    return commits,errors
+
+
 
 if __name__=="__main__":
     from pprint import pprint

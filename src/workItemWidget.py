@@ -14,16 +14,17 @@ class MySignals(QObject):
 
 class WorkItemWidget(Ui_workItemWidget):
 
-    def __init__(self, parent: QWidget, workItem=-1):
+    def __init__(self, parent: QWidget):
         self.setupUi(parent)
-        self.data = WorkItemModel(WorkItem=workItem, WorkItemDescription=None)
-        if self.data.WorkItem>0:
-            self.lineEditWorkItem.setText(str(self.data.WorkItem))
-        if self.data.WorkItemDescription:
-            self.labelWorkItemDesc.setText(f'<span style="color:green">{self.data.WorkItemDescription}</span>')
-
+        self.data = WorkItemModel(WorkItem=-1, WorkItemDescription=None)
         self.lineEditWorkItem.editingFinished.connect(self.workItemChangedCB)
         self.signals=MySignals(parent)
+
+    def setWorkItem(self, workItem:int):
+        if workItem>0:
+            self.data.WorkItem=workItem
+            self.lineEditWorkItem.setText(str(self.data.WorkItem))
+            self.lineEditWorkItem.editingFinished.emit()
 
     @Slot()
     def workItemChangedCB(self):
