@@ -49,37 +49,13 @@ class Ui_Dialog(object):
         self.frame.setFrameShadow(QFrame.Raised)
         self.verticalLayout_2 = QVBoxLayout(self.frame)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.horizontalLayout_4 = QHBoxLayout()
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.label_3 = QLabel(self.frame)
-        self.label_3.setObjectName(u"label_3")
-        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
-        self.label_3.setSizePolicy(sizePolicy)
-
-        self.horizontalLayout_3.addWidget(self.label_3)
-
-        self.comboBoxDevBranch = QComboBox(self.frame)
-        self.comboBoxDevBranch.setObjectName(u"comboBoxDevBranch")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.comboBoxDevBranch.sizePolicy().hasHeightForWidth())
-        self.comboBoxDevBranch.setSizePolicy(sizePolicy1)
-
-        self.horizontalLayout_3.addWidget(self.comboBoxDevBranch)
-
-
-        self.horizontalLayout_4.addLayout(self.horizontalLayout_3)
-
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.label = QLabel(self.frame)
         self.label.setObjectName(u"label")
+        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
         self.label.setSizePolicy(sizePolicy)
 
@@ -87,16 +63,35 @@ class Ui_Dialog(object):
 
         self.comboBoxMainBranch = QComboBox(self.frame)
         self.comboBoxMainBranch.setObjectName(u"comboBoxMainBranch")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.comboBoxMainBranch.sizePolicy().hasHeightForWidth())
         self.comboBoxMainBranch.setSizePolicy(sizePolicy1)
 
         self.horizontalLayout.addWidget(self.comboBoxMainBranch)
 
 
-        self.horizontalLayout_4.addLayout(self.horizontalLayout)
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.label_3 = QLabel(self.frame)
+        self.label_3.setObjectName(u"label_3")
+        sizePolicy.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
+        self.label_3.setSizePolicy(sizePolicy)
+
+        self.horizontalLayout_3.addWidget(self.label_3)
+
+        self.comboBoxDevBranch = QComboBox(self.frame)
+        self.comboBoxDevBranch.setObjectName(u"comboBoxDevBranch")
+        sizePolicy1.setHeightForWidth(self.comboBoxDevBranch.sizePolicy().hasHeightForWidth())
+        self.comboBoxDevBranch.setSizePolicy(sizePolicy1)
+
+        self.horizontalLayout_3.addWidget(self.comboBoxDevBranch)
 
 
-        self.verticalLayout_2.addLayout(self.horizontalLayout_4)
+        self.verticalLayout_2.addLayout(self.horizontalLayout_3)
 
         self.workItemWidgetFrame = QFrame(self.frame)
         self.workItemWidgetFrame.setObjectName(u"workItemWidgetFrame")
@@ -109,6 +104,28 @@ class Ui_Dialog(object):
         self.groupBox.setObjectName(u"groupBox")
         self.verticalLayout = QVBoxLayout(self.groupBox)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.pbSearchCommits = QPushButton(self.groupBox)
+        self.pbSearchCommits.setObjectName(u"pbSearchCommits")
+        self.pbSearchCommits.setAutoDefault(False)
+
+        self.horizontalLayout_5.addWidget(self.pbSearchCommits)
+
+        self.labelCommitSearch = QLabel(self.groupBox)
+        self.labelCommitSearch.setObjectName(u"labelCommitSearch")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.labelCommitSearch.sizePolicy().hasHeightForWidth())
+        self.labelCommitSearch.setSizePolicy(sizePolicy2)
+        self.labelCommitSearch.setTextFormat(Qt.RichText)
+
+        self.horizontalLayout_5.addWidget(self.labelCommitSearch)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_5)
+
         self.lvCommits = QListView(self.groupBox)
         self.lvCommits.setObjectName(u"lvCommits")
         self.lvCommits.setWordWrap(True)
@@ -165,9 +182,6 @@ class Ui_Dialog(object):
         self.splitter.addWidget(self.frame)
         self.webEngineView = QWebEngineView(self.splitter)
         self.webEngineView.setObjectName(u"webEngineView")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.webEngineView.sizePolicy().hasHeightForWidth())
         self.webEngineView.setSizePolicy(sizePolicy2)
         self.webEngineView.setMinimumSize(QSize(500, 0))
@@ -186,9 +200,11 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Integrate work item", None))
-        self.label_3.setText(QCoreApplication.translate("Dialog", u"Development branch", None))
         self.label.setText(QCoreApplication.translate("Dialog", u"Main branch", None))
+        self.label_3.setText(QCoreApplication.translate("Dialog", u"Development branch", None))
         self.groupBox.setTitle(QCoreApplication.translate("Dialog", u"Intergrable commits", None))
+        self.pbSearchCommits.setText(QCoreApplication.translate("Dialog", u"Search", None))
+        self.labelCommitSearch.setText("")
         self.label_2.setText(QCoreApplication.translate("Dialog", u"Integrator", None))
         self.labelAvatar.setText("")
         self.pbIntegrate.setText(QCoreApplication.translate("Dialog", u"Integrate", None))

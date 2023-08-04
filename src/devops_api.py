@@ -2,6 +2,7 @@ import yaml,json,os,httpx
 from functools import cache
 from joblib import Memory
 from cache_dir import *
+from git import log_error
 
 memory=Memory(get_cache_dir(), verbose=0)
 
@@ -41,6 +42,8 @@ def api_call(cli:str, route:str, method:str="get", body=None, **params):
             ret=rsp.json()
         else:
             ret=rsp.text
+        if not rsp.is_success:
+            log_error(ret)
         return rsp.is_success,ret    
 
 def git_api_call(route:str, method="get", **params):
@@ -107,40 +110,42 @@ def get_my_identity():
     ret= get_identities(os.getlogin())
     return ret[0] if ret else None
 
-def create_pull_request(repo_url, src_branch, target_branch, title, commit_ids, workItem):
+def create_pull_request(repo_url, src_branch, target_branch, title, workItem, commit_ids=None, reviewer_ids=None):
     repo=get_repo_by_url(repo_url)
     if repo is None:
         return False,f"unknown repo {repo_url}"
+    body=dict(
+        sourceRefName = "refs/heads/"+src_branch,
+        targetRefName = "refs/heads/"+target_branch,
+        title = title,
+        workItemRefs = [{"id":workItem}]
+    )
+    if commit_ids:
+        body["commits"] = [{"id":cid, "workItems":workItemRefs} for cid in commit_ids]
+    if reviewer_ids:
+        body["reviewers"] = [{"id":cid, "isRequired" : True} for cid in reviewer_ids if cid]
     
-    my_id=get_my_identity()
-    if my_id is None:
-        return False,f"could not get my identity"
     workItemRefs=[{"id":workItem}]
-    ok,ret=git_api_call(f"repositories/{repo['id']}/pullrequests",method="post",
-                        body={
-                            "sourceRefName": "refs/heads/"+src_branch,
-                            "targetRefName": "refs/heads/"+target_branch,
-                            "title":title,
-                            "commits" : [{"id":cid, "workItems":workItemRefs} for cid in commit_ids],
-                            "workItemRefs": workItemRefs
-                        })
+    ok,ret=git_api_call(f"repositories/{repo['id']}/pullrequests",method="post", body=body)
     return ok,ret
 
 
-def update_pull_request(repo_url, pull_req_id):
+def update_pull_request(repo_url, pull_req_id, auto_complete=False, delete_source_branch=True):
     repo=get_repo_by_url(repo_url)
     if repo is None:
         return False,f"unknown repo {repo_url}"
     
-    my_id=get_my_identity()
-    if my_id is None:
-        return False,f"could not get my identity"
+    body={
+        "completionOptions" : {"deleteSourceBranch" : delete_source_branch}
+    }
+    if auto_complete:
+        my_id=get_my_identity()
+        if my_id is None:
+            print("could not get my identity")
+        else:
+            body["autoCompleteSetBy"] = {"id":my_id["localId"]}
 
-    ok,ret=git_api_call(f"repositories/{repo['id']}/pullrequests/{pull_req_id}",method="patch",
-                        body={
-                            "autoCompleteSetBy":{"id":my_id["localId"]},
-                            "completionOptions" : {"deleteSourceBranch" : True}
-                        })
+    ok,ret=git_api_call(f"repositories/{repo['id']}/pullrequests/{pull_req_id}",method="patch", body=body)
     return ok,ret
 
 

@@ -56,16 +56,18 @@ if __name__=="__main__":
             time.sleep(1)
         data=[]
         with open(_get_list_file(),"rt") as fp:
-            for line in fp.readlines():
-                data.append(json.loads(line))
+            for line in (x.strip() for x in fp.readlines() if x):
+                if line:
+                    data.append(json.loads(line))
         delete_list=[]
         for i_task,task in enumerate(data):
             repo_dir=task["repo"]
             git.set_root_dir(repo_dir)
             stash_ref= None
-            shelves=git.list_shelves()
-            if len(shelves)>0:
-                stash_ref = git.find_shelve_ref(task["stash"])
+            if task["stash"]:
+                shelves=git.list_shelves()
+                if len(shelves)>0:
+                    stash_ref = git.find_shelve_ref(task["stash"])
             branch_exists=git.local_branch_exists(task["branch"])
             if (stash_ref is not None) or branch_exists:
                 pr_id=task["pull_req"]

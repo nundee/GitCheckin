@@ -118,6 +118,7 @@ class IntegrateDialog(QDialog):
         self._selectBranches()
         self.workItem=WorkItemWidget(ui.workItemWidgetFrame)
         self.workItem.signals.workItemChanged.connect(self.onWorkitemChanged)
+        self.ui.pbSearchCommits.clicked.connect(self.searchCommits)
         self.commitModel=CommitView()
         self.ui.lvCommits.setModel(self.commitModel)
         self.ui.lvCommits.setItemDelegate(CommitDelegate())
@@ -137,25 +138,35 @@ class IntegrateDialog(QDialog):
         def selectBranch(cb:QComboBox,branches:list[str],branch_candidates:list[str]):
             cb.setModel(model:=QtCore.QStringListModel(branches))
             for branch in branch_candidates:
-                try:
-                    cb.setCurrentIndex(branches.index(branch))
-                    return cb.currentIndex()
-                except ValueError:
-                    pass
+                if branch:
+                    try:
+                        cb.setCurrentIndex(branches.index(branch))
+                        return cb.currentIndex()
+                    except ValueError:
+                        pass
             return 0
 
-        i_remote=selectBranch(self.ui.comboBoxDevBranch,git.remote_branches(),["origin/development"])
-        i_local=selectBranch(self.ui.comboBoxMainBranch,git.local_branches(),["main","master"])
-        self.iModel.DevBranch=self.ui.comboBoxDevBranch.model().stringList()[i_remote]
-        self.iModel.MainBranch=self.ui.comboBoxMainBranch.model().stringList()[i_local]
+        selectBranch(self.ui.comboBoxDevBranch,git.remote_branches(),[self.iModel.DevBranch])
+        selectBranch(self.ui.comboBoxMainBranch,git.local_branches(),[self.iModel.MainBranch, "main","master"])
 
     @Slot(WorkItemModel)
     def onWorkitemChanged(self,wi):
-        commits,errors=git.get_commits_related_to_work_item(wi.WorkItem,"master","origin/development")
+        self.iModel.WorkItem=wi.WorkItem
+        
+    @Slot(WorkItemModel)
+    def searchCommits(self):
+        cb=self.ui.comboBoxDevBranch
+        self.iModel.DevBranch=cb.model().stringList()[cb.currentIndex()]
+        cb=self.ui.comboBoxMainBranch
+        self.iModel.MainBranch=cb.model().stringList()[cb.currentIndex()]
+        local_branch = self.iModel.CherryPickBranch
+        if not local_branch:
+            local_branch = self.iModel.MainBranch
+        commits,errors=git.get_commits_related_to_work_item(self.iModel.WorkItem,local_branch,self.iModel.DevBranch)
         self.iModel.Commits=commits
         self.commitModel.setData(commits)
+        self.ui.labelCommitSearch.setText(f'<span style="color:blue"><b>{len(commits)} commits found</b></span>')
         self.ui.lvCommits.selectionModel().setCurrentIndex(self.commitModel.index(0),QtCore.QItemSelectionModel.SelectionFlag.Select)
-        
 
     @Slot()
     def onCommitClicked(self):
@@ -172,7 +183,9 @@ class IntegrateDialog(QDialog):
             return
         user = [u for u in self.userModel.user_list if u["displayName"]==text]
         if user:
-            pix=user[0]["pixmap"]
+            user=user[0]
+            self.iModel.Integrator=user["localId"]
+            pix=user["pixmap"]
             self.ui.labelAvatar.setPixmap(pix)
         else:
             text=text.split(",")[0].strip()
@@ -186,6 +199,21 @@ def showGui(model:IntegrateModel):
 
 
 if __name__=="__main__":
+    import re,sys
     git.set_root_dir(r'C:\CAMEO\CAMEO_Cumulus')
-    model=IntegrateModel()#WorkItem=19825)
-    showGui(model)
+    ok,currentBranch=git.get_current_branch_name()
+    model=IntegrateModel()#WorkItem=19832)
+    if currentBranch.startswith("tmp_integrate_"):
+        m = re.search(r'\btmp_integrate_(\d+)_',currentBranch)
+        if m:
+            model.WorkItem=int(m[1])
+            model.CherryPickBranch=currentBranch
+        else:
+            git.log_error("cannot not work on this branch")
+            sys.exit(-1)
+
+
+    try:
+        showGui(model)
+    finally:
+        git.git("switch", currentBranch)

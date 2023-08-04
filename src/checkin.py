@@ -231,8 +231,8 @@ if __name__ == "__main__":
     # commit changes
     git.log_info("commit changes to temp branch")
     ok,msg=git.git("add", "--", *changes)
-    commit = git.Commit()
-    commit.parseSubject(data.Comment)
+    commit = git.Commit(Subject=data.Comment)
+    commit.parseSubject()
     commit.WorkItems+=[data.WorkItem]
     ok,msg=git.git("commit", "-m", commit.asCommitMessage())
     #if not git.is_clean_working_tree():
@@ -254,10 +254,10 @@ if __name__ == "__main__":
     ok,pr=check_error(devops_api.create_pull_request(remote_url,
                                          tmp_branchName,currentBranch,
                                          data.Comment,
-                                         [lastCommit.Hash],
-                                         data.WorkItem
+                                         data.WorkItem,
+                                         [lastCommit.Hash]                                         
                                          ))
-    ok,pr=check_error(devops_api.update_pull_request(remote_url,pr["pullRequestId"]))
+    ok,pr=check_error(devops_api.update_pull_request(remote_url,pr["pullRequestId"],auto_complete=True))
 
     from cleanup import post_cleanup
     post_cleanup(git.get_root_dir(),tmp_branchName,stash_commit.Hash,pr["pullRequestId"])

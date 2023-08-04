@@ -1,7 +1,6 @@
 import sys
 from subprocess import Popen,PIPE, run as run_process
-from models import ERROR_PREFIX, P_FORMAT, Commit, ParseError, g_parse_log
-
+from models import ERROR_PREFIX, P_FORMAT,LOG_SEP, LOG_SEP_LEN, Commit, ParseError
 from rich import print
 
 def log_info(msg):
@@ -40,8 +39,7 @@ def __prepare_cmd(command, *args, **kwargs):
     cmd_line_args += ["-C", root_dir, command, *args]
     for k,v in kwargs.items():
         cmd_line_args.append(f"--{k}={v}")
-    if OPTIONS.get("verbose",False):
-        print(f"[grey46][i]{' '.join(cmd_line_args)}[/i][/grey46]")
+    print(f"[grey46][i]{' '.join(cmd_line_args)}[/i][/grey46]")
     return cmd_line_args
 
 
@@ -71,7 +69,7 @@ def git(command, *args, **kwargs):
     p=run_process(cmd_line_args,capture_output=True)
     if p.returncode:
         err = p.stderr.decode('utf8')
-        print(f":red_circle:[red]  {err}[/red]")
+        log_error(err)
         return False, err
     else:
         out=p.stdout.decode('utf8')
@@ -183,6 +181,20 @@ def find_shelve_ref(commit_hash):
     return refs[0] if refs else None
 
 
+def g_parse_log(_generator):
+    log_text=[]
+    for line in _generator:
+        if line.startswith(ERROR_PREFIX):
+            yield ParseError(ErrorMessage=line[len(ERROR_PREFIX):])
+        if line.endswith(LOG_SEP):
+            log_text.append(line[:-LOG_SEP_LEN])
+            text="\n".join(log_text)
+            log_text.clear()
+            yield Commit.parse(text)
+        else:
+            log_text.append(line)
+
+
 def parse_log(*args, **kwargs):
     return g_parse_log(_g_git('log', *args, pretty=P_FORMAT, **kwargs))
 
@@ -213,13 +225,17 @@ def get_commits_related_to_work_item(workItem:int, localBranch, remoteBranch):
     if not ok:return [],[ret]
     if not is_clean_working_tree():
         return [],[]
-    ok,ret=git("pull")
-    if not ok:return [],[ret]
+    if not localBranch.startswith("tmp_"):
+        ok,ret=git("pull")
+        if not ok:return [],[ret]
 
-    for obj in parse_log(f'{localBranch}..{remoteBranch}', '--grep=#%d' % workItem, '--left-right', '--cherry-pick'):
+    grep_rx = r'(#%d\b|_%d_)' % (workItem,workItem)
+    already_cherry_picked=set(c.CherryPickedFrom for c in parse_log('-E', grep=grep_rx) if c.CherryPickedFrom)
+
+    for obj in parse_log(f'{localBranch}..{remoteBranch}', '--merges', '--left-right', '--cherry-pick', '-E', grep=grep_rx):
         if isinstance(obj,ParseError):
             errors.append(obj.ErrorMessage)
-        elif len(obj.ParentHashes)>1 and  workItem in obj.WorkItems:
+        elif workItem in obj.WorkItems and obj.Hash not in already_cherry_picked:
             commits.append(obj)
     return commits,errors
 

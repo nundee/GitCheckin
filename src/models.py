@@ -24,35 +24,13 @@ P_FORMAT = FIELD_SEP.join(a for _,a in PRETTY_FORMAT) + LOG_SEP
 class ParseError:
     ErrorMessage:str = ""
 
-
-htmlTemplate=Template('''
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
-<html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" />
-<style type="text/css">
-p, li { white-space: pre-wrap; }
-hr { height: 1px; border-width: 0; }
-li.unchecked::marker { content: "\2610"; }
-li.checked::marker { content: "\2612"; }
-</style>
-</head>
-<body style=" font-family:'Calibri'; font-size:9pt;">
-<h2 style=" color:#0000ff;"> ${Title} </h2>
-<p> ${Body} </p>
-<ul>
-<li> Work item: <b> ${WorkItem} </b></li>
-<li> Author: <b><span style=" color:#008000;"> ${Author} </span></b></li>
-<li> Date: <b><span style=" color:#008000;"> ${Date} </span></b></li>
-<li> Commit hash: <b> ${Hash} </b></li>
-</ul>
-</body></html>
-''')
-
+with open(os.path.join(os.path.dirname(__file__),"commitViewTemplate.html"),'rt') as fp:
+    htmlTemplate=Template(fp.read())
 
 @dataclass
 class Commit:
     Hash:str = ""
-    Title:str = ""
-    Body:object  = None
+    Subject:str = ""
     ParentHashes:list[str] = field(default_factory=list)
     Author:str  = ""
     Date:datetime = None
@@ -65,45 +43,23 @@ class Commit:
         return self.Hash[:8]
 
     def asCommitMessage(self):
-        wi=' #%d' % self.WorkItems[-1]
-        msg=self.Title
-        if not msg.endswith(wi):
-            msg += wi
-        if self.Body:
-            msg += (os.linesep+os.linesep+self.Body)
-        if self.CherryPickedFrom:
-            msg += (os.linesep+os.linesep+"CherryPickedFrom:"+self.CherryPickedFrom)
+        wi='Related work items: #' + str(self.WorkItems[-1])
+        msg=self.Subject
+        if wi not in msg:
+            msg += (os.linesep+os.linesep+wi)
         return msg
 
-    def parseSubject(self, text:str):
-        subj = text.strip().splitlines()
-        title = ""
-        body = None
-        k=-1
-        for i,line in enumerate(subj):
-            if len(line)>0:
-                title+=line
-            else:
-                k=i+1
-                break
-        
-        workItems = re.findall(r'#(\d+)\b',title)
-
-        if k>0 and k < (len(subj)-1):
-            body="\n".join(subj[k:])
-            workItems+=re.findall(r'#(\d+)\b',body)
+    def parseSubject(self):      
+        workItems = re.findall(r'#(\d+)\b',self.Subject)
+        if not workItems:
+            workItems = re.findall(r'_(\d+)_',self.Subject)
 
         if workItems:
             workItems = list(set(int(w) for w in workItems))
-        if body:
-            m=re.search(r'\(cherry\spicked\sfrom\scommit\s([0-9a-f]+)\)',body)
-            if m:
-                self.CherryPickedFrom=m[0]
-                s,e=m.span()
-                body=body[:s]+body[e:]
+        m=re.search(r'\(cherry\spicked\sfrom\scommit\s([0-9a-f]+)\)',self.Subject)
+        if m:
+            self.CherryPickedFrom=m[1]
 
-        self.Title=title
-        self.Body=body
         self.WorkItems=workItems
 
     @staticmethod
@@ -114,33 +70,29 @@ class Commit:
         commit.Author = obj["Author"]
         commit.Date = datetime.fromtimestamp(int(obj["Date"]))
         commit.ParentHashes=obj["ParentHashes"].split()
-        commit.parseSubject(obj["Subject"])
+        commit.Subject=obj["Subject"]
+        commit.parseSubject()
 
         return commit
 
     def toHtml(self):
+        sep='\r\n\r\n'
+        if sep in self.Subject:
+            title,body=self.Subject.split(sep,maxsplit=2)
+        else:
+            sep='\n\n'
+            if sep in self.Subject:
+                title,body=self.Subject.split(sep,maxsplit=2)
+            else:
+                title,body=self.Subject.strip(),""
         return htmlTemplate.substitute(
-            Title=self.Title,
-            Body=str(self.Body) if self.Body else '',
+            Title=title,
+            Body=body,
             WorkItem=self.WorkItems[-1],
             Author=self.Author,
             Date=self.Date,
             Hash = self.Hash
         )
-
-
-def g_parse_log(_generator):
-    log_text=[]
-    for line in _generator:
-        if line.startswith(ERROR_PREFIX):
-            yield ParseError(ErrorMessage=line[len(ERROR_PREFIX):])
-        if line.endswith(LOG_SEP):
-            log_text.append(line[:-LOG_SEP_LEN])
-            text="\n".join(log_text)
-            log_text.clear()
-            yield Commit.parse(text)
-        else:
-            log_text.append(line)
 
 
 @dataclass
@@ -174,6 +126,7 @@ class CheckinModel:
 class IntegrateModel:
     WorkItem:int = -1
     Commits:list[Commit] = field(default_factory=list)
-    MainBranch:str = "main"
-    DevBranch:str = "development"
+    MainBranch:str = ""
+    DevBranch:str = "origin/development"
+    CherryPickBranch:str = ""
     Integrator:str = ""
