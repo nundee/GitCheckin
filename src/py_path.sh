@@ -1,1 +1,0 @@
-PY_PATH=/c/Users/DRAGOTIA/source/python/python-3.11.4-embed-amd64/python

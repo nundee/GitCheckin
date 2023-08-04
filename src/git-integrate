@@ -1,4 +1,3 @@
 #!/bin/bash
 my_dir="$( dirname "${BASH_SOURCE[0]}" )"
-source "$my_dir/py_path.sh"
-$PY_PATH "$my_dir/integrate.py" "$@"
+"$my_dir/python3/python.exe" "$my_dir/integrate.py" "$@"
