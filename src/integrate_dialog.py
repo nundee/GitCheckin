@@ -110,7 +110,7 @@ class CommitDelegate(QStyledItemDelegate):
 
 class IntegrateDialog(QDialog):
     def __init__(self, iModel:IntegrateModel, parent=None) -> None:
-        super().__init__(parent)
+        super().__init__(parent,f=Qt.WindowType.WindowMinMaxButtonsHint)
         ui=Ui_Dialog()
         self.iModel=iModel
         self.ui=ui
