@@ -216,7 +216,7 @@ def get_commits_related_to_work_item(workItem:int, localBranch, remoteBranch):
         log_error(error)
         return [],[error]
 
-    origin,devBranch=remoteBranch.split('/',maxsplit=2)
+    origin,devBranch=remoteBranch.split('/',maxsplit=1)
     ok,ret=git("switch",devBranch)
     if not ok:return [],[ret]
     ok,ret=git("fetch", origin,devBranch)

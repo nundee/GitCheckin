@@ -22,11 +22,13 @@ def integrate_work_item(model:IntegrateModel, currentBranch):
             git.log_error(currentBranch)
             sys.exit(-1)
 
+    time_stamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+
     is_temp_branch=currentBranch.startswith("tmp_integrate_")
     if is_temp_branch:
         tmp_branchName=currentBranch
     else:
-        tmp_branchName=f"tmp_integrate_{model.WorkItem}_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}"
+        tmp_branchName=f"tmp_integrate_{model.WorkItem}_{time_stamp}"
 
     def abort():
         if not is_temp_branch:
@@ -40,10 +42,7 @@ def integrate_work_item(model:IntegrateModel, currentBranch):
             abort()
         return ret_tuple
 
-    #git.log_info("fetch origin")
-    #origin,devBranch=model.DevBranch.split('/',maxsplit=2)
     commits = sorted(model.Commits,key=lambda c:c.Date)
-
     
     if not is_temp_branch:
         git.log_info("create and switch to temporary branch "+tmp_branchName)
@@ -51,7 +50,7 @@ def integrate_work_item(model:IntegrateModel, currentBranch):
     else:
         check_error(git.git("fetch","-q", "origin"))
     for x in commits:
-        ok,_=git.git("cherry-pick","-x","-m","1", x.Hash)
+        ok,_=git.git("cherry-pick","--allow-empty", "-x","-m","1", x.Hash)
         if not ok:
             print(Markdown(cherry_pick_prompt))
             action=Prompt.ask("What do you want me to do?", choices=['stop','skip','abort'])
@@ -75,7 +74,7 @@ def integrate_work_item(model:IntegrateModel, currentBranch):
     git.log_info("create pull request ...")
     ok,pr=check_error(devops_api.create_pull_request(remote_url,
                                          tmp_branchName,model.MainBranch,
-                                         f"Integrate work item {model.WorkItem} into {model.MainBranch}",
+                                         f"Integrate work item {model.WorkItem} into {model.MainBranch}. Created on {time_stamp}",
                                          model.WorkItem,
                                          reviewer_ids=[model.Integrator]
                                          ))
@@ -89,7 +88,7 @@ def integrate_work_item(model:IntegrateModel, currentBranch):
     open_new_tab(f'{remote_url}/pullrequest/{pr["pullRequestId"]}')
 
     if is_temp_branch:
-        _,devBranch = model.DevBranch.split("/", maxsplit=2)
+        _,devBranch = model.DevBranch.split("/", maxsplit=1)
         git.git("switch",devBranch)
     else:
         git.git("switch",currentBranch)

@@ -121,11 +121,10 @@ def create_pull_request(repo_url, src_branch, target_branch, title, workItem, co
         workItemRefs = [{"id":workItem}]
     )
     if commit_ids:
-        body["commits"] = [{"id":cid, "workItems":workItemRefs} for cid in commit_ids]
+        body["commits"] = [{"id":cid, "workItems":body["workItemRefs"]} for cid in commit_ids]
     if reviewer_ids:
         body["reviewers"] = [{"id":cid, "isRequired" : True} for cid in reviewer_ids if cid]
     
-    workItemRefs=[{"id":workItem}]
     ok,ret=git_api_call(f"repositories/{repo['id']}/pullrequests",method="post", body=body)
     return ok,ret
 

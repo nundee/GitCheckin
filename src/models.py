@@ -78,11 +78,11 @@ class Commit:
     def toHtml(self):
         sep='\r\n\r\n'
         if sep in self.Subject:
-            title,body=self.Subject.split(sep,maxsplit=2)
+            title,body=self.Subject.split(sep,maxsplit=1)
         else:
             sep='\n\n'
             if sep in self.Subject:
-                title,body=self.Subject.split(sep,maxsplit=2)
+                title,body=self.Subject.split(sep,maxsplit=1)
             else:
                 title,body=self.Subject.strip(),""
         return htmlTemplate.substitute(
