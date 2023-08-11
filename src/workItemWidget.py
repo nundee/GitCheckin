@@ -32,7 +32,7 @@ class WorkItemWidget(Ui_workItemWidget):
             wiId=int(self.lineEditWorkItem.text())
             self.labelWorkItemDesc.setText(f'<span style="color:blue">*fetching work item ...*</span>')
             QCoreApplication.processEvents()
-            rsp=list(workitems.get_work_items(wiId))[0]
+            rsp=(workitems.get_work_items(wiId))[0]
             is_error=False
             if isinstance(rsp,str):
                 is_error=True
@@ -40,7 +40,8 @@ class WorkItemWidget(Ui_workItemWidget):
             else:
                 self.data.WorkItem=wiId
                 title=rsp["fields"]["System.Title"]
-        except:
+        except Exception as ex:
+            print(ex)
             is_error=True
             title="Please enter a valid work item"
 

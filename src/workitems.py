@@ -1,7 +1,6 @@
 from devops_api import wit_api_call,cache
 
-@cache
-def get_work_items(id_or_text):
+def _get_work_items(id_or_text):
     try:
         wiId = int(id_or_text)
         success,rsp=wit_api_call("workitems", method="get", ids=wiId, fields=','.join(["System.Id","System.Title"]))
@@ -30,7 +29,9 @@ def get_work_items(id_or_text):
             msg="unknown error"
         yield msg
 
-
+@cache
+def get_work_items(id_or_text):
+    return list(_get_work_items(id_or_text))
 
 if __name__=='__main__':
     from pprint import pprint
