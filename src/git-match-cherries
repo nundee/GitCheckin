@@ -1,0 +1,15 @@
+#!/bin/bash
+a="$(git rev-parse --verify "$1")" &&
+b="$(git rev-parse --verify "$2")" &&
+git rev-list --no-merges "$a...$b" | xargs git show | git patch-id |
+gawk '{
+    if (p[$1]) 
+        p[$1] = p[$1] " " $2
+    else 
+        p[$1]=$2
+    }
+    END {
+        for (i in p) {
+            print i,p[i]
+        }
+    }'

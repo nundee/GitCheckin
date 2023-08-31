@@ -50,7 +50,7 @@ def integrate_work_item(model:IntegrateModel, currentBranch):
     else:
         check_error(git.git("fetch","-q", "origin"))
     for x in commits:
-        ok,_=git.git("cherry-pick","--allow-empty", "-x","-m","1", x.Hash)
+        ok,_=git.git("cherry-pick","--allow-empty", "-x", x.Hash)
         if not ok:
             print(Markdown(cherry_pick_prompt))
             action=Prompt.ask("What do you want me to do?", choices=['stop','skip','abort'])
@@ -102,8 +102,8 @@ if __name__ == "__main__":
     import sys
     import argparse
     parser = argparse.ArgumentParser(
-        prog="git checkin",
-        description="check in pending changes to azure dev ops"
+        prog="git integrate",
+        description="integrate a work item to azure dev ops"
         )
 
     parser.add_argument("-w", "--work-item", type=int, default=-1)

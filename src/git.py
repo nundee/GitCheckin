@@ -44,6 +44,13 @@ def __prepare_cmd(command, *args, **kwargs):
 
 
 
+def check_res(t):
+    if not t[0]:
+        log_error(t[1])
+        raise Exception(t[1])
+    return t
+
+
 def _g_git(command, *args, **kwargs):
     cmd_line_args=__prepare_cmd(command,*args,**kwargs)
     with Popen(cmd_line_args,stdout=PIPE, stderr=PIPE) as proc:        
@@ -74,8 +81,9 @@ def git(command, *args, **kwargs):
     else:
         out=p.stdout.decode('utf8')
         if OPTIONS.get("verbose",False):
-            print(f":right_arrow: [gold3][i]{out}[/i][/gold3]")
-        print(":white_check_mark:")
+            print(f":right_arrow: [gold3][i]{out}[/i][/gold3]:white_check_mark:")
+        else:
+            print(":white_check_mark:")
         return True, out.splitlines()
 
 def status():
@@ -198,63 +206,103 @@ def g_parse_log(_generator):
 def parse_log(*args, **kwargs):
     return g_parse_log(_g_git('log', *args, pretty=P_FORMAT, **kwargs))
 
+def get_changed_files(commit_hash):
+    return git("diff-tree","--no-commit-id", "--name-only", "-r", commit_hash)
 
-def get_commits_related_to_work_item(workItem:int, localBranch, remoteBranch):
-    commits = []
-    errors=[]
+
+def check_branches(localBranch, remoteBranch, do_check=True):
     if not localBranch:
-        ok,localBranch = get_current_branch_name()
-        if not ok:
-            log_error(localBranch)
-            return [],[localBranch]
+        _,localBranch = check_res(get_current_branch_name())
     if not remote_branch_exists(remoteBranch):           
-            error=f"remote {remoteBranch} does not exist"
-            log_error(error)
-            return [],[error]
+        raise Exception(f"remote {remoteBranch} does not exist")
     elif not local_branch_exists(localBranch):
-        error=f"local {localBranch} does not exist"
-        log_error(error)
-        return [],[error]
-
+        raise Exception(f"local {localBranch} does not exist")
     origin,devBranch=remoteBranch.split('/',maxsplit=1)
-    ok,ret=git("switch",devBranch)
-    if not ok:return [],[ret]
-    ok,ret=git("fetch", origin,devBranch)
-    if not ok:return [],[ret]
-    ok,ret=git("switch",localBranch)
-    if not ok:return [],[ret]
-    if not is_clean_working_tree():
-        return [],[]
-    if not localBranch.startswith("tmp_"):
-        ok,ret=git("pull")
-        if not ok:return [],[ret]
+    if do_check:
+        check_res(git("switch",devBranch))
+        check_res(git("fetch", origin,devBranch))
+    check_res(git("switch",localBranch))
+    if do_check and not is_clean_working_tree():
+        raise Exception("the working tree is not clean")
+    if do_check and not localBranch.startswith("tmp_"):
+        check_res(git("pull"))
 
-    grep_rx = r'(#%d\b|_%d_)' % (workItem,workItem)
-    already_cherry_picked=set(c.CherryPickedFrom for c in parse_log('-E', grep=grep_rx) if c.CherryPickedFrom)
 
-    for obj in parse_log(f'{localBranch}..{remoteBranch}', '--merges', '--left-right', '--cherry-pick', '-E', grep=grep_rx):
-        if isinstance(obj,ParseError):
-            errors.append(obj.ErrorMessage)
-        elif workItem in obj.WorkItems and obj.Hash not in already_cherry_picked:
-            commits.append(obj)
+def list_non_integrated_work_items(localBranch, remoteBranch, do_check=True):
+    errors:list[str]=[]
+    w_items=set()
+    try:
+        check_branches(localBranch,remoteBranch,do_check)
+        already_cherry_picked=set(c.CherryPickedFrom for c in parse_log() if c.CherryPickedFrom)
+
+        for obj in parse_log(f'{localBranch}...{remoteBranch}', '--no-merges', '--right-only', '--cherry-pick'):
+            if obj.Hash not in already_cherry_picked:
+                for w in obj.WorkItems:
+                    w_items.add(w)
+    except Exception as ex:
+        errors.append(str(ex))
+    return sorted(list(w_items)),errors
+
+def get_commits_related_to_work_item(workItem:int, localBranch, remoteBranch, do_check=True):
+    commits:list[Commit] = []
+    errors:list[str]=[]
+    try:
+        check_branches(localBranch,remoteBranch,do_check)
+
+        grep_rx = r'(#%d\b|_%d_)' % (workItem,workItem)
+        already_cherry_picked=set(c.CherryPickedFrom for c in parse_log('-E', grep=grep_rx) if c.CherryPickedFrom)
+
+        for obj in parse_log(f'{localBranch}...{remoteBranch}', '--no-merges', '--right-only', '--cherry-pick', '-E', grep=grep_rx):
+            if isinstance(obj,ParseError):
+                errors.append(obj.ErrorMessage)
+            elif workItem in obj.WorkItems and obj.Hash not in already_cherry_picked:
+                commits.append(obj)
+    except Exception as ex:
+        errors.append(str(ex))
+
     return commits,errors
 
 
 
 if __name__=="__main__":
-    from pprint import pprint
-    def main():
-        set_root_dir(r'C:\CAMEO\CAMEO_Cumulus')
-        print("current branch is", get_current_branch_name())
-        print("status")
-        for line in status()[1]:
-            print (line)
-        
-        # for commit in list_shelves():
-        #     pprint(commit)
+    set_root_dir(r'C:\CAMEO\CAMEO_Cumulus')
+    set_verbose(False)
+    currBranch=get_current_branch_name()[1]
+    print("current branch is", get_current_branch_name()[1])
+    print("status")
+    for line in status()[1]:
+        print (line)
 
+    def test_shelves():
+        for commit in list_shelves():
+            print(commit)
 
+    def test_parse_log():
         for commit in parse_log("-n", "6"):
-            pprint(commit)
+            print(commit)
 
-    main()
+
+    def test_list_work_items():
+        w_items,errors=list_non_integrated_work_items("master_tmp", "origin/development", do_check=False)
+        git("switch",currBranch)
+        print("work items:", w_items)
+        for err in errors:
+            print(err)
+
+
+    def test_work_item_commits(work_item:int):
+        commits,errors=get_commits_related_to_work_item(work_item,"master_tmp", "origin/development", do_check=False)
+        git("switch",currBranch)
+        commits = sorted(commits,key=lambda c:c.Date)
+        for commit in commits:
+            print(commit)
+            ok,files=get_changed_files(commit.Hash)
+            #if ok:
+            #    print("Files changed")
+            #    print(files)
+        for err in errors:
+            print(err)
+
+
+    #test_list_work_items()
+    test_work_item_commits(int(sys.argv[1]))

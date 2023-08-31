@@ -36,6 +36,7 @@ class Commit:
     Date:datetime = None
     WorkItems:list[int] = field(default_factory=list)
     CherryPickedFrom:str=None
+    Files:list[str] = field(default_factory=list)
     #RefNames:
 
     @property
