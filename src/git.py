@@ -228,20 +228,58 @@ def check_branches(localBranch, remoteBranch, do_check=True):
         check_res(git("pull"))
 
 
-def list_non_integrated_work_items(localBranch, remoteBranch, do_check=True):
+def list_non_integrated_commits(localBranch, remoteBranch, do_check=True, include_files=False):
     errors:list[str]=[]
-    w_items=set()
+    commits:list[Commit]=[]
     try:
         check_branches(localBranch,remoteBranch,do_check)
         already_cherry_picked=set(c.CherryPickedFrom for c in parse_log() if c.CherryPickedFrom)
-
-        for obj in parse_log(f'{localBranch}...{remoteBranch}', '--no-merges', '--right-only', '--cherry-pick'):
-            if obj.Hash not in already_cherry_picked:
-                for w in obj.WorkItems:
-                    w_items.add(w)
+        commits = list(c for c in parse_log(f'{localBranch}...{remoteBranch}', '--no-merges', '--right-only', '--cherry-pick') if c.Hash not in already_cherry_picked)
+        if include_files:
+            for c in commits:
+                _,c.Files=get_changed_files(c.Hash)
     except Exception as ex:
         errors.append(str(ex))
-    return sorted(list(w_items)),errors
+    return commits,errors
+
+
+def find_commit_deps(commit:Commit, all_commits:dict[str,Commit]):
+    deps:list[Commit]=[]
+    files=set(commit.Files)
+    c=commit
+    while c and c.ParentHashes:
+        c=all_commits.get(c.ParentHashes[0], None)
+        if c is not None and any(f in files for f in c.Files):
+            deps.append(c)
+            files.update(c.Files)
+    return deps
+
+def list_non_integrated_work_items(localBranch, remoteBranch, do_check=True):
+    wi_graph={}
+    commits,errors = list_non_integrated_commits(localBranch,remoteBranch,do_check, include_files=True)
+    if errors:
+        for err in errors:
+            log_error(err)
+        return wi_graph
+
+    commit_table = dict((c.Hash,c) for c in commits)
+    graph:dict[Commit,list[Commit]]={}
+    for commit in commits:
+        deps=find_commit_deps(commit,commit_table)
+        if deps:
+            graph[commit]=deps
+
+    for commit in commits:
+        for wi in commit.WorkItems:
+            wi_deps=wi_graph.get(wi,[])
+            if not wi_deps:
+                wi_graph[wi] = wi_deps
+            deps = graph.get(commit,None)
+            if deps:
+                for c in deps:
+                    wi_deps+=c.WorkItems
+            
+    return wi_graph
 
 def get_commits_related_to_work_item(workItem:int, localBranch, remoteBranch, do_check=True):
     commits:list[Commit] = []
@@ -282,17 +320,23 @@ if __name__=="__main__":
             print(commit)
 
 
-    def test_list_work_items():
-        w_items,errors=list_non_integrated_work_items("master_tmp", "origin/development", do_check=False)
-        git("switch",currBranch)
-        print("work items:", w_items)
+    def test_non_integrated_commits():
+        commits,errors=list_non_integrated_commits("master", "origin/development", do_check=False, include_files=False)
         for err in errors:
-            print(err)
+            log_error(err)
+        if commits:
+            commits = sorted(commits,key=lambda c:c.Date)
+            for c in commits:
+                if not c.WorkItems:
+                    print(c.Hash)
+
+    def test_list_work_items():
+        w_items=list_non_integrated_work_items("master", "origin/development", do_check=False)
+        print("work items:", w_items)
 
 
     def test_work_item_commits(work_item:int):
-        commits,errors=get_commits_related_to_work_item(work_item,"master_tmp", "origin/development", do_check=False)
-        git("switch",currBranch)
+        commits,errors=get_commits_related_to_work_item(work_item,"master", "origin/development", do_check=False)
         commits = sorted(commits,key=lambda c:c.Date)
         for commit in commits:
             print(commit)
@@ -304,5 +348,9 @@ if __name__=="__main__":
             print(err)
 
 
-    #test_list_work_items()
-    test_work_item_commits(int(sys.argv[1]))
+    try:
+        test_non_integrated_commits()
+        #test_list_work_items()
+        #test_work_item_commits(int(sys.argv[1]))
+    finally:
+        git("switch",currBranch)

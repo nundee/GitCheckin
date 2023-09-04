@@ -39,6 +39,12 @@ class Commit:
     Files:list[str] = field(default_factory=list)
     #RefNames:
 
+    def __eq__(self, __value: object) -> bool:
+        return self.Hash == __value.__hash__
+
+    def __hash__(self) -> int:
+        return hash(self.Hash)
+
     @property
     def AbbrevHash(self):
         return self.Hash[:8]
