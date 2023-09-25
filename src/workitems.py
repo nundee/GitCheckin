@@ -5,10 +5,10 @@ def _get_work_items(id_or_text):
         wiId = int(id_or_text)
         success,rsp=wit_api_call("workitems", method="get", ids=wiId, fields=','.join(["System.Id","System.Title"]))
     except:
+        col="[System.ChangedDate]"
         if id_or_text:
             whereClause = f"[System.Title] contains '{id_or_text}'"
         else:
-            col="[System.ChangedDate]"
             count=500
             whereClause = f"{col} >= @Today-{count} ORDER BY {col} DESC"
         req_body=dict(
@@ -34,6 +34,50 @@ def get_work_items(id_or_text):
     return list(_get_work_items(id_or_text))
 
 if __name__=='__main__':
-    from pprint import pprint
-    for wi in get_work_items(2222):
-        pprint(wi)
+    import sys
+    import argparse
+    import git
+    parser = argparse.ArgumentParser(
+        prog="git workitems",
+        description="work item utility"
+        )
+
+    parser.add_argument("-w", "--work-item", type=int, default=-1)
+    parser.add_argument("-v", "--verbose", action="store_true", default=False)
+
+    args, other_args=parser.parse_known_args(sys.argv[1:])
+    git.set_verbose(args.verbose)
+
+    def abort_err(text):
+        git.log_error(text)
+        sys.exit(-1)
+
+    ok,currBranch=git.get_current_branch_name()
+    if not ok:
+        abort_err(currBranch)
+
+
+    if other_args:
+        sub_cmd=other_args[0]
+        if sub_cmd == "show":
+            if args.work_item>0:
+                search_arg=args.work_item
+            elif len(other_args)>1:
+                search_arg=other_args[1]
+            else:
+                abort_err("'show' sub command needs an work item or a search word")
+            for wi in get_work_items(search_arg):
+                print(f"{wi['id']}: {wi['fields']['System.Title']}")
+
+        elif sub_cmd == "find-deps":
+            if git.local_branch_exists("master"):
+                master="master"
+            elif git.local_branch_exists("main"):
+                master="main"
+            wi_graph=git.list_non_integrated_work_items(master,"origin/"+currBranch)
+            if args.work_item<=0:
+                print(wi_graph)
+            else:
+                if args.work_item in wi_graph:
+                    print(wi_graph["args.work_item"])
+            

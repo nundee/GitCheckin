@@ -97,7 +97,7 @@ def integrate_work_item(model:IntegrateModel, currentBranch):
 
 if __name__ == "__main__":
 
-    git.set_root_dir(r'C:\CAMEO\CAMEO_Cumulus')
+    #git.set_root_dir(r'C:\CAMEO\CAMEO_Cumulus')
 
     import sys
     import argparse

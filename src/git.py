@@ -327,8 +327,8 @@ if __name__=="__main__":
         if commits:
             commits = sorted(commits,key=lambda c:c.Date)
             for c in commits:
-                if not c.WorkItems:
-                    print(c.Hash)
+                if c.WorkItems:
+                    print(c)
 
     def test_list_work_items():
         w_items=list_non_integrated_work_items("master", "origin/development", do_check=False)
@@ -349,8 +349,8 @@ if __name__=="__main__":
 
 
     try:
-        test_non_integrated_commits()
-        #test_list_work_items()
+        #test_non_integrated_commits()
+        test_list_work_items()
         #test_work_item_commits(int(sys.argv[1]))
     finally:
         git("switch",currBranch)

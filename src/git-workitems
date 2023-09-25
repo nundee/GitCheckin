@@ -1,0 +1,3 @@
+#!/bin/bash
+my_dir="$( dirname "${BASH_SOURCE[0]}" )"
+"$my_dir/python3/python.exe" "$my_dir/workitems.py" "$@"
