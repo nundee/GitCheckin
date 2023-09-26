@@ -58,26 +58,29 @@ if __name__=='__main__':
     if not ok:
         abort_err(currBranch)
 
+    try:
 
-    if args.show:
-        if args.work_item>0:
-            search_arg=args.work_item
-        elif len(args.query)>0:
-            search_arg=args.query
-        else:
-            abort_err("'show' sub command needs an work item or a search word")
-        for wi in get_work_items(search_arg):
-            print(f"{wi['id']}: {wi['fields']['System.Title']}")
+        if args.show:
+            if args.work_item>0:
+                search_arg=args.work_item
+            elif len(args.query)>0:
+                search_arg=args.query
+            else:
+                abort_err("'show' sub command needs an work item or a search word")
+            for wi in get_work_items(search_arg):
+                print(f"{wi['id']}: {wi['fields']['System.Title']}")
 
-    elif args.find_deps:
-        if git.local_branch_exists("master"):
-            master="master"
-        elif git.local_branch_exists("main"):
-            master="main"
-        wi_graph=git.list_non_integrated_work_items(master,"origin/"+currBranch)
-        if args.work_item<=0:
-            print(wi_graph)
-        else:
-            if args.work_item in wi_graph:
-                print(wi_graph["args.work_item"])
+        elif args.find_deps:
+            if git.local_branch_exists("master"):
+                master="master"
+            elif git.local_branch_exists("main"):
+                master="main"
+            wi_graph=git.list_non_integrated_work_items(master,"origin/"+currBranch)
+            if args.work_item<=0:
+                print(wi_graph)
+            else:
+                if args.work_item in wi_graph:
+                    print(wi_graph["args.work_item"])
             
+    finally:
+        git.git("switch", currBranch)
