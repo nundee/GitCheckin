@@ -10,7 +10,7 @@ def log_error(msg):
 
 
 OPTIONS=dict(
-    verbose=True,
+    verbose=0,
     root_dir=None
 )
 
@@ -23,7 +23,7 @@ def get_root_dir():
 
 def set_root_dir(dir):
     OPTIONS["root_dir"]=dir
-def set_verbose(val:bool):
+def set_verbose(val:int):
     OPTIONS["verbose"]=val
 
 
@@ -39,7 +39,8 @@ def __prepare_cmd(command, *args, **kwargs):
     cmd_line_args += ["-C", root_dir, command, *args]
     for k,v in kwargs.items():
         cmd_line_args.append(f"--{k}={v}")
-    print(f"[grey46][i]{' '.join(cmd_line_args)}[/i][/grey46]")
+    if OPTIONS.get("verbose",0)>0:
+        print(f"[grey46][i]{' '.join(cmd_line_args)}[/i][/grey46]")
     return cmd_line_args
 
 
@@ -80,9 +81,9 @@ def git(command, *args, **kwargs):
         return False, err
     else:
         out=p.stdout.decode('utf8')
-        if OPTIONS.get("verbose",False):
+        if (verbose:=OPTIONS.get("verbose",0))>1:
             print(f":right_arrow: [gold3][i]{out}[/i][/gold3]:white_check_mark:")
-        else:
+        elif verbose>0:
             print(":white_check_mark:")
         return True, out.splitlines()
 
@@ -299,6 +300,17 @@ def get_commits_related_to_work_item(workItem:int, localBranch, remoteBranch, do
         errors.append(str(ex))
 
     return commits,errors
+
+def apply_common_args(argv):
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="common arguments"
+        )
+
+    parser.add_argument("-v", "--verbose", type=int, default=0)
+    args, other=parser.parse_known_args(argv)
+    set_verbose(args.verbose)
+    return other
 
 
 

@@ -43,10 +43,12 @@ if __name__=='__main__':
         )
 
     parser.add_argument("-w", "--work-item", type=int, default=-1)
-    parser.add_argument("-v", "--verbose", action="store_true", default=False)
+    parser.add_argument("--show", action="store_true", default=False)
+    parser.add_argument("--find-deps", action="store_true", default=False)
+    parser.add_argument("-q", "--query", type=str, default="", help="a string to query for in the work item titles")
 
-    args, other_args=parser.parse_known_args(sys.argv[1:])
-    git.set_verbose(args.verbose)
+    argv=git.apply_common_args(sys.argv[1:])
+    args=parser.parse_args(argv)
 
     def abort_err(text):
         git.log_error(text)
@@ -57,27 +59,25 @@ if __name__=='__main__':
         abort_err(currBranch)
 
 
-    if other_args:
-        sub_cmd=other_args[0]
-        if sub_cmd == "show":
-            if args.work_item>0:
-                search_arg=args.work_item
-            elif len(other_args)>1:
-                search_arg=other_args[1]
-            else:
-                abort_err("'show' sub command needs an work item or a search word")
-            for wi in get_work_items(search_arg):
-                print(f"{wi['id']}: {wi['fields']['System.Title']}")
+    if args.show:
+        if args.work_item>0:
+            search_arg=args.work_item
+        elif len(args.query)>0:
+            search_arg=args.query
+        else:
+            abort_err("'show' sub command needs an work item or a search word")
+        for wi in get_work_items(search_arg):
+            print(f"{wi['id']}: {wi['fields']['System.Title']}")
 
-        elif sub_cmd == "find-deps":
-            if git.local_branch_exists("master"):
-                master="master"
-            elif git.local_branch_exists("main"):
-                master="main"
-            wi_graph=git.list_non_integrated_work_items(master,"origin/"+currBranch)
-            if args.work_item<=0:
-                print(wi_graph)
-            else:
-                if args.work_item in wi_graph:
-                    print(wi_graph["args.work_item"])
+    elif args.find_deps:
+        if git.local_branch_exists("master"):
+            master="master"
+        elif git.local_branch_exists("main"):
+            master="main"
+        wi_graph=git.list_non_integrated_work_items(master,"origin/"+currBranch)
+        if args.work_item<=0:
+            print(wi_graph)
+        else:
+            if args.work_item in wi_graph:
+                print(wi_graph["args.work_item"])
             
