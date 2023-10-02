@@ -108,11 +108,10 @@ if __name__ == "__main__":
 
     parser.add_argument("-w", "--work-item", type=int, default=-1)
     #parser.add_argument("--no-pull", action="store_true", default=False)
-    parser.add_argument("-v", "--verbose", action="store_true", default=False)
 
-    args=parser.parse_args(sys.argv[1:])
+    argv=git.apply_common_args(sys.argv[1:])
+    args=parser.parse_args(argv)
 
-    git.set_verbose(args.verbose)
 
     from integrate_dialog import showGui
   

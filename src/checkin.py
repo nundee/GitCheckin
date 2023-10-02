@@ -139,9 +139,9 @@ if __name__ == "__main__":
     parser.add_argument("-w", "--work-item", type=int, default=0)
     parser.add_argument("-c", "--comment", type=str, default="")
     parser.add_argument("--no-pull", action="store_true", default=False)
-    parser.add_argument("-v", "--verbose", action="store_true", default=False)
 
-    args,checkin_list=parser.parse_known_args(sys.argv[1:])
+    argv=git.apply_common_args(sys.argv[1:])
+    args,checkin_list=parser.parse_known_args(argv)
 
     git.OPTIONS["verbose"]=args.verbose
 
