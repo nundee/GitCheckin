@@ -15,7 +15,7 @@ cherry_pick_prompt='''
 - **abort** :  *Cancel the operation and return to the pre-sequence state*
 '''
 
-def integrate_work_item(model:IntegrateModel, currentBranch):
+def integrate_work_item(model:IntegrateModel, currentBranch, createPR):
     if not currentBranch:
         ok,currentBranch=git.get_current_branch_name()
         if not ok:
@@ -67,29 +67,31 @@ def integrate_work_item(model:IntegrateModel, currentBranch):
     check_error(git.git("fetch","-q", "origin", tmp_branchName ))
     check_error(git.git("checkout", tmp_branchName ))
 
-    # if we got here then is all right
-    # create pull request
-    remote_url=git.get_remote_url()
-    git.log_info(f"remote url is {remote_url}")
-    git.log_info("create pull request ...")
-    ok,pr=check_error(devops_api.create_pull_request(remote_url,
-                                         tmp_branchName,model.MainBranch,
-                                         f"Integrate work item {model.WorkItem} into {model.MainBranch}. Created on {time_stamp}",
-                                         model.WorkItem,
-                                         reviewer_ids=[model.Integrator]
-                                         ))
-    ok,pr=check_error(devops_api.update_pull_request(remote_url,pr["pullRequestId"],auto_complete=False, delete_source_branch=True))
+    if createPR:
+        # if we got here then is all right
+        # create pull request
+        remote_url=git.get_remote_url()
+        git.log_info(f"remote url is {remote_url}")
+        git.log_info("create pull request ...")
+        ok,pr=check_error(devops_api.create_pull_request(remote_url,
+                                            tmp_branchName,model.MainBranch,
+                                            f"Integrate work item {model.WorkItem} into {model.MainBranch}. Created on {time_stamp}",
+                                            model.WorkItem,
+                                            reviewer_ids=[model.Integrator]
+                                            ))
+        ok,pr=check_error(devops_api.update_pull_request(remote_url,pr["pullRequestId"],auto_complete=False, delete_source_branch=True))
 
-    from cleanup import post_cleanup
-    post_cleanup(git.get_root_dir(),tmp_branchName,"",pr["pullRequestId"])
+        from cleanup import post_cleanup
+        post_cleanup(git.get_root_dir(),tmp_branchName,"",pr["pullRequestId"])
 
-    from webbrowser import open_new_tab
-    git.log_info("I will redirect you to the devops web page. Please have a look at your pull request")
-    open_new_tab(f'{remote_url}/pullrequest/{pr["pullRequestId"]}')
+        from webbrowser import open_new_tab
+        git.log_info("I will redirect you to the devops web page. Please have a look at your pull request")
+        open_new_tab(f'{remote_url}/pullrequest/{pr["pullRequestId"]}')
 
     if is_temp_branch:
-        _,devBranch = model.DevBranch.split("/", maxsplit=1)
-        git.git("switch",devBranch)
+        if createPR:
+            _,devBranch = model.DevBranch.split("/", maxsplit=1)
+            git.git("switch",devBranch)
     else:
         git.git("switch",currentBranch)
     return 0
@@ -107,11 +109,12 @@ if __name__ == "__main__":
         )
 
     parser.add_argument("-w", "--work-item", type=int, default=-1)
+    parser.add_argument("--no-pr", action="store_true", default=False)
     #parser.add_argument("--no-pull", action="store_true", default=False)
 
     argv=git.apply_common_args(sys.argv[1:])
     args=parser.parse_args(argv)
-
+    createPR = not args.no_pr
 
     from integrate_dialog import showGui
   
@@ -124,7 +127,8 @@ if __name__ == "__main__":
     if currentBranch.startswith("tmp_integrate_"):
         m = re.search(r'\btmp_integrate_(\d+)_',currentBranch)
         if m:
-            model.WorkItem=int(m[1])
+            if model.WorkItem<=0:
+                model.WorkItem=int(m[1])
             model.CherryPickBranch=currentBranch
         else:
             git.log_error("cannot not work on this branch")
@@ -133,7 +137,7 @@ if __name__ == "__main__":
     try:
         if not showGui(model):
             sys.exit(-1)
-        sys.exit(integrate_work_item(model,currentBranch))
+        sys.exit(integrate_work_item(model,currentBranch,createPR))
     finally:
         git.git("switch", currentBranch)
         

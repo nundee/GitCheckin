@@ -143,8 +143,6 @@ if __name__ == "__main__":
     argv=git.apply_common_args(sys.argv[1:])
     args,checkin_list=parser.parse_known_args(argv)
 
-    git.OPTIONS["verbose"]=args.verbose
-
     ok,currentBranch=git.get_current_branch_name()
     if not ok:
         git.log_error(currentBranch)

@@ -147,7 +147,7 @@ class IntegrateDialog(QDialog):
             return 0
 
         selectBranch(self.ui.comboBoxDevBranch,git.remote_branches(),[self.iModel.DevBranch])
-        selectBranch(self.ui.comboBoxMainBranch,git.local_branches(),[self.iModel.MainBranch, "main","master"])
+        selectBranch(self.ui.comboBoxMainBranch,git.local_branches(),[self.iModel.CherryPickBranch, self.iModel.MainBranch, "main","master"])
 
     @Slot(WorkItemModel)
     def onWorkitemChanged(self,wi):

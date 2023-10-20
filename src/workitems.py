@@ -44,6 +44,7 @@ if __name__=='__main__':
 
     parser.add_argument("-w", "--work-item", type=int, default=-1)
     parser.add_argument("--show", action="store_true", default=False)
+    parser.add_argument("--show-commits", action="store_true", default=False)
     parser.add_argument("--find-deps", action="store_true", default=False)
     parser.add_argument("-q", "--query", type=str, default="", help="a string to query for in the work item titles")
 
@@ -70,6 +71,8 @@ if __name__=='__main__':
             for wi in get_work_items(search_arg):
                 print(f"{wi['id']}: {wi['fields']['System.Title']}")
 
+        #elif args.show_commits:
+        #    git.li
         elif args.find_deps:
             if git.local_branch_exists("master"):
                 master="master"
