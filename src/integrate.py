@@ -15,7 +15,7 @@ cherry_pick_prompt='''
 - **abort** :  *Cancel the operation and return to the pre-sequence state*
 '''
 
-def integrate_work_item(model:IntegrateModel, currentBranch, createPR):
+def integrate_work_item(model:IntegrateModel, currentBranch, createPR, is_temp_branch):
     if not currentBranch:
         ok,currentBranch=git.get_current_branch_name()
         if not ok:
@@ -24,7 +24,8 @@ def integrate_work_item(model:IntegrateModel, currentBranch, createPR):
 
     time_stamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
 
-    is_temp_branch=currentBranch.startswith("tmp_integrate_")
+    if not is_temp_branch:
+        is_temp_branch=currentBranch.startswith("tmp_integrate_")
     if is_temp_branch:
         tmp_branchName=currentBranch
     else:
@@ -110,6 +111,8 @@ if __name__ == "__main__":
 
     parser.add_argument("-w", "--work-item", type=int, default=-1)
     parser.add_argument("--no-pr", action="store_true", default=False)
+    parser.add_argument("--is-temp-branch", action="store_true", default=False)
+
     #parser.add_argument("--no-pull", action="store_true", default=False)
 
     argv=git.apply_common_args(sys.argv[1:])
@@ -133,11 +136,12 @@ if __name__ == "__main__":
         else:
             git.log_error("cannot not work on this branch")
             sys.exit(-1)
-
+    elif args.is_temp_branch:
+        model.CherryPickBranch=currentBranch
     try:
         if not showGui(model):
             sys.exit(-1)
-        sys.exit(integrate_work_item(model,currentBranch,createPR))
+        sys.exit(integrate_work_item(model,currentBranch,createPR,args.is_temp_branch))
     finally:
         git.git("switch", currentBranch)
         

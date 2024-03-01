@@ -60,6 +60,10 @@ if __name__=='__main__':
         abort_err(currBranch)
 
     try:
+        if git.local_branch_exists("master"):
+            master="master"
+        elif git.local_branch_exists("main"):
+            master="main"
 
         if args.show:
             if args.work_item>0:
@@ -71,19 +75,30 @@ if __name__=='__main__':
             for wi in get_work_items(search_arg):
                 print(f"{wi['id']}: {wi['fields']['System.Title']}")
 
-        #elif args.show_commits:
-        #    git.li
+        elif args.show_commits:
+            if args.work_item<=0:
+                abort_err("work item number is required")
+            commits,errors=git.get_commits_related_to_work_item(args.work_item,master, "origin/"+currBranch, do_check=True)
+            commits = sorted(commits,key=lambda c:c.Date)
+            files_changed=set()
+            for commit in commits:
+                git.print(commit)
+                ok,files=git.get_changed_files(commit.Hash)
+                if ok:
+                    files_changed |= set(files)
+            if len(files_changed)>0:
+                git.print("Files changed")
+                git.print(files_changed)
+            for err in errors:
+                git.log_error(err)
+
         elif args.find_deps:
-            if git.local_branch_exists("master"):
-                master="master"
-            elif git.local_branch_exists("main"):
-                master="main"
             wi_graph=git.list_non_integrated_work_items(master,"origin/"+currBranch)
             if args.work_item<=0:
                 print(wi_graph)
             else:
                 if args.work_item in wi_graph:
-                    print(wi_graph["args.work_item"])
+                    print(wi_graph[args.work_item])
             
     finally:
         git.git("switch", currBranch)

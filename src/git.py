@@ -225,7 +225,7 @@ def check_branches(localBranch, remoteBranch, do_check=True):
     check_res(git("switch",localBranch))
     if do_check and not is_clean_working_tree():
         raise Exception("the working tree is not clean")
-    if do_check and not localBranch.startswith("tmp_"):
+    if do_check and not localBranch.startswith("tmp_") and remote_branch_exists(localBranch):
         check_res(git("pull"))
 
 
@@ -272,13 +272,13 @@ def list_non_integrated_work_items(localBranch, remoteBranch, do_check=True):
 
     for commit in commits:
         for wi in commit.WorkItems:
-            wi_deps=wi_graph.get(wi,[])
+            wi_deps=wi_graph.get(wi,set())
             if not wi_deps:
                 wi_graph[wi] = wi_deps
             deps = graph.get(commit,None)
             if deps:
                 for c in deps:
-                    wi_deps+=c.WorkItems
+                    wi_deps |= set(c.WorkItems)
             
     return wi_graph
 
@@ -308,7 +308,10 @@ def apply_common_args(argv):
         )
 
     parser.add_argument("-v", "--verbose", type=int, default=0)
+    parser.add_argument("-C", "--repo", type=str, default=None, help="root directory of the git repository")
     args, other=parser.parse_known_args(argv)
+    if args.repo:
+        set_root_dir(args.repo)
     set_verbose(args.verbose)
     return other
 
